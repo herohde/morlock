@@ -1,6 +1,6 @@
 package board
 
-// Piece represents a chess piece (King, Pawn, etc) with no color. 3 bits.
+// Piece represents a chess piece (King, Pawn, etc) with no color. Zero indicates "No Piece". 3 bits.
 type Piece uint8
 
 const (
@@ -34,6 +34,25 @@ func ParsePiece(r rune) (Piece, bool) {
 
 func (p Piece) IsValid() bool {
 	return Pawn <= p && p <= King
+}
+
+// NominalValue returns the absolute nominal value in centi-pawns. The King
+// has an arbitrary value of 100 pawns.
+func (p Piece) NominalValue() Score {
+	switch p {
+	case Pawn:
+		return 100
+	case Bishop, Knight:
+		return 300
+	case Rook:
+		return 500
+	case Queen:
+		return 900
+	case King:
+		return 10000
+	default:
+		return 0
+	}
 }
 
 func (p Piece) String() string {

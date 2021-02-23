@@ -91,6 +91,12 @@ const (
 	A8
 )
 
+// Iteration helpers to enable "for i := ZeroSquare; i<NumSquares; i++".
+const (
+	ZeroSquare Square = 0
+	NumSquares Square = 64
+)
+
 func NewSquare(f File, r Rank) Square {
 	return ((Square(r) & 0x7) << 3) | (Square(f) & 0x7)
 }

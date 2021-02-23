@@ -6,11 +6,12 @@ import "fmt"
 type MoveType uint8
 
 const (
-	Normal MoveType = iota
-	Push            // Pawn move
+	Normal    MoveType = iota
+	Push               // Pawn move
+	Jump               // Pawn 2-square move
+	EnPassant          // Implicitly a pawn capture
 	QueenSideCastle
 	KingSideCastle
-	EnPassant // Implicitly a pawn capture
 	Capture
 	Promotion
 	CapturePromotion
@@ -20,10 +21,10 @@ const (
 
 // Move represents a not-necessarily legal move along with contextual metadata. 64bits.
 type Move struct {
+	Type      MoveType
 	From, To  Square
 	Promotion Piece // desired piece for promotion, if any.
 	Capture   Piece // captured piece, if any.
-	Type      MoveType
 	Score     Score
 }
 
@@ -54,6 +55,10 @@ func ParseMove(str string) (Move, error) {
 	}
 
 	return Move{From: from, To: to}, nil
+}
+
+func (m Move) Equals(o Move) bool {
+	return m.From == o.From && m.To == o.To && m.Promotion == o.Promotion
 }
 
 func (m Move) String() string {
