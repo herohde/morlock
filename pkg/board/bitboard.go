@@ -24,6 +24,11 @@ func (b Bitboard) PopCount() int {
 	return bits.OnesCount64(uint64(b))
 }
 
+// LastPopSquare returns the index of the least-significant 1. Returns 64 if zero.
+func (b Bitboard) LastPopSquare() Square {
+	return Square(bits.TrailingZeros64(uint64(b)))
+}
+
 func (b Bitboard) String() string {
 	var sb strings.Builder
 	for i := ZeroSquare; i < NumSquares; i++ {
@@ -52,6 +57,15 @@ func BitRank(r Rank) Bitboard {
 // BitFile returns a bitboard for the given file.
 func BitFile(f File) Bitboard {
 	return Bitboard(0x0101010101010101 << f)
+}
+
+// PawnCaptureboard returns all potential pawn captures for the given color.
+func PawnCaptureboard(c Color, pawns Bitboard) Bitboard {
+	if c == White {
+		return ((pawns << 9) &^ BitFile(FileH)) | ((pawns << 7) &^ BitFile(FileA))
+	} else {
+		return ((pawns >> 9) &^ BitFile(FileA)) | ((pawns >> 7) &^ BitFile(FileH))
+	}
 }
 
 // KingAttackboard returns all potential moves/attacks for a King at the given square.
@@ -112,6 +126,12 @@ func NewRotatedBitboard(bb Bitboard) RotatedBitboard {
 	return ret
 }
 
+// Mask returns the bitboard mask (in normal orientation).
+func (r RotatedBitboard) Mask() Bitboard {
+	return r.rot
+}
+
+// Xor returns the rotated bitboard xor the square mask.
 func (r RotatedBitboard) Xor(sq Square) RotatedBitboard {
 	return RotatedBitboard{
 		rot:    r.rot ^ BitMask(sq),
@@ -221,8 +241,6 @@ func init() {
 				}
 			}
 
-			// println(fmt.Sprintf("%v[%v] = %v", uint(state), sq, tmp))
-
 			rookfile[sq][state] = tmp
 		}
 	}
@@ -271,17 +289,6 @@ var rot45L = [NumSquares]Square{
 	63, 62, 60, 57, 53, 48, 42, 35,
 }
 
-var off45L = [NumSquares]int{
-	28, 21, 15, 10, 6, 3, 1, 0,
-	36, 28, 21, 15, 10, 6, 3, 1,
-	43, 36, 28, 21, 15, 10, 6, 3,
-	49, 43, 36, 28, 21, 15, 10, 6,
-	54, 49, 43, 36, 28, 21, 15, 10,
-	58, 54, 49, 43, 36, 28, 21, 15,
-	61, 58, 54, 49, 43, 36, 28, 21,
-	63, 61, 58, 54, 49, 43, 36, 28,
-}
-
 var mask45L = [NumSquares]int{
 	255, 127, 63, 31, 15, 7, 3, 1,
 	127, 255, 127, 63, 31, 15, 7, 3,
@@ -291,6 +298,17 @@ var mask45L = [NumSquares]int{
 	7, 15, 31, 63, 127, 255, 127, 63,
 	3, 7, 15, 31, 63, 127, 255, 127,
 	1, 3, 7, 15, 31, 63, 127, 255,
+}
+
+var off45L = [NumSquares]int{
+	28, 21, 15, 10, 6, 3, 1, 0,
+	36, 28, 21, 15, 10, 6, 3, 1,
+	43, 36, 28, 21, 15, 10, 6, 3,
+	49, 43, 36, 28, 21, 15, 10, 6,
+	54, 49, 43, 36, 28, 21, 15, 10,
+	58, 54, 49, 43, 36, 28, 21, 15,
+	61, 58, 54, 49, 43, 36, 28, 21,
+	63, 61, 58, 54, 49, 43, 36, 28,
 }
 
 // rot45R represents the 45 degree counter-clockwise rotated square.
@@ -306,7 +324,7 @@ var mask45L = [NumSquares]int{
 //
 // 63 62 61 60 59 58 57 56            1   3   7  15  31  63 127 255
 // 55 54 53 52 51 50 49 48            3   7  15  31  63 127 255 127
-// 47 46 45 44 43 42 41 40  len45R    7  15  31  63 127 255 127  63
+// 47 46 45 44 43 42 41 40  mask45R   7  15  31  63 127 255 127  63
 // 39 38 37 36 35 34 33 32 |------>  15  31  63 127 255 127  63  31
 // 31 30 29 28 27 26 25 24           31  63 127 255 127  63  31  15
 // 23 22 21 20 19 18 17 16           63 127 255 127  63  31  15   7
@@ -333,6 +351,17 @@ var rot45R = [NumSquares]Square{
 	35, 42, 48, 53, 57, 60, 62, 63,
 }
 
+var mask45R = [NumSquares]int{
+	1, 3, 7, 15, 31, 63, 127, 255,
+	3, 7, 15, 31, 63, 127, 255, 127,
+	7, 15, 31, 63, 127, 255, 127, 63,
+	15, 31, 63, 127, 255, 127, 63, 31,
+	31, 63, 127, 255, 127, 63, 31, 15,
+	63, 127, 255, 127, 63, 31, 15, 7,
+	127, 255, 127, 63, 31, 15, 7, 3,
+	255, 127, 63, 31, 15, 7, 3, 1,
+}
+
 var off45R = [NumSquares]int{
 	0, 1, 3, 6, 10, 15, 21, 28,
 	1, 3, 6, 10, 15, 21, 28, 36,
@@ -344,13 +373,82 @@ var off45R = [NumSquares]int{
 	28, 36, 43, 49, 54, 58, 61, 63,
 }
 
-var mask45R = [NumSquares]int{
-	1, 3, 7, 15, 31, 63, 127, 255,
-	3, 7, 15, 31, 63, 127, 255, 127,
-	7, 15, 31, 63, 127, 255, 127, 63,
-	15, 31, 63, 127, 255, 127, 63, 31,
-	31, 63, 127, 255, 127, 63, 31, 15,
-	63, 127, 255, 127, 63, 31, 15, 7,
-	127, 255, 127, 63, 31, 15, 7, 3,
-	255, 127, 63, 31, 15, 7, 3, 1,
+// BishopAttackboard returns all potential moves/attacks for a Bishop at the given square.
+func BishopAttackboard(bb RotatedBitboard, sq Square) Bitboard {
+	diagL := int(bb.rot45L>>off45L[sq]) & mask45L[sq]
+	diagR := int(bb.rot45R>>off45R[sq]) & mask45R[sq]
+	return bishopL[sq][diagL] | bishopR[sq][diagR]
+}
+
+var (
+	bishopL, bishopR [NumSquares][numStates]Bitboard // (pos, state) -> bitboard
+)
+
+func init() {
+	// Build mask by raytracing each direction, similar to Rook.
+	//
+	// ------
+	// -X----
+	// --B---
+	// ------
+	// ----X-
+	//
+	// Bishop: --B--
+	// State:  -XX-X
+	// Attack: -X-XX
+
+	for sq := ZeroSquare; sq < NumSquares; sq++ {
+		for state := EmptyBitboard; state < Bitboard(mask45L[sq]); state++ {
+			tmp := EmptyBitboard
+
+			// UpLeft: X<--B (rot45L)
+			for i := 1; i < min(8-sq.Rank(), 8-sq.File()); i++ {
+				tmp |= BitMask(Square(sq.Rank().V()+i)<<3 + Square(sq.File().V()+i))
+				if BitMask(Square(min(sq.Rank(), sq.File())+i))&state != 0 {
+					break
+				}
+			}
+
+			// DownRight: B-->X (rot45L)
+			for i := 1; i < min(sq.Rank(), sq.File())+1; i++ {
+				tmp |= BitMask(Square(sq.Rank().V()-i)<<3 + Square(sq.File().V()-i))
+				if BitMask(Square(min(sq.Rank(), sq.File())-i))&state != 0 {
+					break
+				}
+			}
+
+			bishopL[sq][state] = tmp
+		}
+	}
+
+	for sq := ZeroSquare; sq < NumSquares; sq++ {
+		for state := EmptyBitboard; state < Bitboard(mask45R[sq]); state++ {
+			tmp := EmptyBitboard
+
+			// UpRight: B-->X (rot45R)
+			for i := 1; i < min(8-sq.Rank(), sq.File()+1); i++ {
+				tmp |= BitMask(Square(sq.Rank().V()+i)<<3 + Square(sq.File().V()-i))
+				if BitMask(Square(min(sq.Rank(), 7-sq.File())+i))&state != 0 {
+					break
+				}
+			}
+
+			// DownLeft: X<-R (rot45R)
+			for i := 1; i < min(sq.Rank()+1, 8-sq.File()); i++ {
+				tmp |= BitMask(Square(sq.Rank().V()-i)<<3 + Square(sq.File().V()+i))
+				if BitMask(Square(min(sq.Rank(), 7-sq.File())-i))&state != 0 {
+					break
+				}
+			}
+
+			bishopR[sq][state] = tmp
+		}
+	}
+}
+
+func min(r Rank, f File) int {
+	if int(r) < int(f) {
+		return int(r)
+	}
+	return int(f)
 }

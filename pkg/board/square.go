@@ -113,6 +113,14 @@ func ParseSquare(f, r rune) (Square, error) {
 	return NewSquare(file, rank), nil
 }
 
+func ParseSquareStr(str string) (Square, error) {
+	runes := []rune(str)
+	if len(runes) != 2 {
+		return 0, fmt.Errorf("invalid square: %v", str)
+	}
+	return ParseSquare(runes[0], runes[1])
+}
+
 func (s Square) IsValid() bool {
 	return s <= A8
 }
@@ -143,6 +151,11 @@ const (
 	Rank8
 )
 
+const (
+	ZeroRank Rank = 0
+	NumRanks Rank = 8
+)
+
 func ParseRank(r rune) (Rank, bool) {
 	switch r {
 	case '1':
@@ -168,6 +181,10 @@ func ParseRank(r rune) (Rank, bool) {
 
 func (r Rank) IsValid() bool {
 	return r <= Rank8
+}
+
+func (r Rank) V() int {
+	return int(r)
 }
 
 func (r Rank) String() string {
@@ -208,6 +225,11 @@ const (
 	FileA
 )
 
+const (
+	ZeroFile File = 0
+	NumFiles File = 8
+)
+
 func ParseFile(r rune) (File, bool) {
 	switch r {
 	case 'a', 'A':
@@ -233,6 +255,10 @@ func ParseFile(r rune) (File, bool) {
 
 func (f File) IsValid() bool {
 	return f <= FileA
+}
+
+func (f File) V() int {
+	return int(f)
 }
 
 func (f File) String() string {

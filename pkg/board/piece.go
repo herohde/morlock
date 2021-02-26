@@ -13,6 +13,11 @@ const (
 	King
 )
 
+const (
+	ZeroPiece Piece = 1
+	NumPieces Piece = 7
+)
+
 func ParsePiece(r rune) (Piece, bool) {
 	switch r {
 	case 'p', 'P':

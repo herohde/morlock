@@ -38,6 +38,9 @@ func TestBitboard(t *testing.T) {
 			assert.Equal(t, tt.bb.String(), tt.expected)
 		}
 	})
+}
+
+func TestAttackboard(t *testing.T) {
 
 	t.Run("king", func(t *testing.T) {
 		tests := []struct {
@@ -96,6 +99,25 @@ func TestBitboard(t *testing.T) {
 
 		for _, tt := range tests {
 			assert.Equal(t, board.RookAttackboard(board.NewRotatedBitboard(tt.bb), tt.sq).String(), tt.expected)
+		}
+	})
+
+	t.Run("bishop", func(t *testing.T) {
+		tests := []struct {
+			bb       board.Bitboard
+			sq       board.Square
+			expected string
+		}{
+			{board.EmptyBitboard, board.H1, "X-------/-X------/--X-----/---X----/----X---/-----X--/------X-/--------"},
+			{board.EmptyBitboard, board.D3, "--------/-------X/X-----X-/-X---X--/--X-X---/--------/--X-X---/-X---X--"},
+			{board.EmptyBitboard, board.A6, "--X-----/-X------/--------/-X------/--X-----/---X----/----X---/-----X--"},
+
+			{board.BitRank(board.Rank2), board.H1, "--------/--------/--------/--------/--------/--------/------X-/--------"},
+			{board.BitRank(board.Rank2), board.D3, "--------/-------X/X-----X-/-X---X--/--X-X---/--------/--X-X---/--------"},
+		}
+
+		for _, tt := range tests {
+			assert.Equal(t, board.BishopAttackboard(board.NewRotatedBitboard(tt.bb), tt.sq).String(), tt.expected)
 		}
 	})
 

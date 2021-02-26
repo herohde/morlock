@@ -8,15 +8,16 @@ const (
 	Black
 )
 
-func ParseColor(r rune) (Color, bool) {
-	switch r {
-	case 'w', 'W':
-		return White, true
-	case 'b', 'B':
-		return Black, true
-	default:
-		return 0, false
+const (
+	ZeroColor Color = 0
+	NumColors Color = 2
+)
+
+func (c Color) Opponent() Color {
+	if c == White {
+		return Black
 	}
+	return White
 }
 
 func (c Color) String() string {
