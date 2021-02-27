@@ -36,12 +36,6 @@ func NewPosition(pieces []Placement, castling Castling, ep Square) (*Position, e
 		ret.xor(p.Square, p.Color, p.Piece)
 	}
 
-	if ret.pieces[White][King].PopCount() != 1 || ret.pieces[Black][King].PopCount() != 1 {
-		return nil, fmt.Errorf("invalid number of kings")
-	}
-	if (KingAttackboard(ret.pieces[White][King].LastPopSquare()) & ret.pieces[Black][King]) != 0 {
-		return nil, fmt.Errorf("kings cannot be adjacent")
-	}
 	return ret, nil
 }
 
@@ -101,25 +95,39 @@ func (p *Position) IsAttacked(c Color, sq Square) bool {
 
 // IsChecked returns true iff the color is in check. Convenient for IsAttacked(King).
 func (p *Position) IsChecked(c Color) bool {
-	return p.IsAttacked(c, p.pieces[c][King].LastPopSquare())
+	if pos := p.pieces[c][King].LastPopSquare(); pos != NumSquares {
+		return p.IsAttacked(c, pos)
+	}
+	return false
 }
 
-// TODO(herohde) 2/24/2021: consider incremental move generation via go/channels.
+// PseudoLegalMoves returns a list of all pseudo-legal moves.
+func (p *Position) PseudoLegalMoves(turn Color) []Move {
+	mask := ^p.pieces[turn][NoPiece] // cannot capture own pieces
 
-func (p *Position) PseudoLegalMoves() []Move {
-	var ret []Move
+	moves := ^p.pieces[turn.Opponent()][NoPiece]
+	captures := p.pieces[turn.Opponent()][NoPiece]
 
-	//	mask := ^p.pieces[p.turn][all] // cannot capture own pieces
+	ret := make([]Move, 50)
 
-	/*
-		origin := p.pieces[p.turn][King]
-		for origin != 0 {
-			sq := origin.PopIndex()
-			origin ^= BitMask(Square(sq))
+	if king := p.pieces[turn][King]; king != EmptyBitboard {
+		from := king.LastPopSquare()
+		attackboard := KingAttackboard(from) & mask
 
-		}
-	*/
+		p.emit(Normal, from, attackboard&moves, &ret)
+		p.emit(Capture, from, attackboard&captures, &ret)
+	}
+
 	return ret
+}
+
+func (p *Position) emit(t MoveType, from Square, attackboard Bitboard, out *[]Move) {
+	for attackboard != EmptyBitboard {
+		for attackboard != EmptyBitboard {
+			to := attackboard.LastPopSquare()
+			attackboard ^= BitMask(to)
+		}
+	}
 }
 
 func (p *Position) String() string {
