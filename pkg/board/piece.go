@@ -63,7 +63,7 @@ func (p Piece) NominalValue() Score {
 func (p Piece) String() string {
 	switch p {
 	case NoPiece:
-		return " "
+		return "-"
 	case Pawn:
 		return "p"
 	case Bishop:

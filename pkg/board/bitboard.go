@@ -68,6 +68,35 @@ func PawnCaptureboard(c Color, pawns Bitboard) Bitboard {
 	}
 }
 
+// PawnMoveboard returns all potential pawn sigle-step moves for the given color.
+func PawnMoveboard(all Bitboard, c Color, pawns Bitboard) Bitboard {
+	if c == White {
+		return (pawns<<8) & ^all
+	} else {
+		return (pawns>>8) & ^all
+	}
+}
+
+// PawnPromotionRank returns the mask of the promotion rank for the given color, i.e.,
+// Rank8 for White or Rank1 for Black.
+func PawnPromotionRank(c Color) Bitboard {
+	if c == White {
+		return BitRank(Rank8)
+	} else {
+		return BitRank(Rank1)
+	}
+}
+
+// PawnJumpRank returns the mask of the target rank for jump moves for the given color,
+// i.e., Rank4 for White or Rank5 for Black.
+func PawnJumpRank(c Color) Bitboard {
+	if c == White {
+		return BitRank(Rank4)
+	} else {
+		return BitRank(Rank5)
+	}
+}
+
 // KingAttackboard returns all potential moves/attacks for a King at the given square.
 func KingAttackboard(sq Square) Bitboard {
 	return king[sq]

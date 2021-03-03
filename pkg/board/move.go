@@ -17,6 +17,31 @@ const (
 	CapturePromotion
 )
 
+func (m MoveType) String() string {
+	switch m {
+	case Normal:
+		return "Normal"
+	case Push:
+		return "Push"
+	case Jump:
+		return "Jump"
+	case EnPassant:
+		return "EnPassant"
+	case QueenSideCastle:
+		return "QueenSideCastle"
+	case KingSideCastle:
+		return "KingSideCastle"
+	case Capture:
+		return "Capture"
+	case Promotion:
+		return "Promotion"
+	case CapturePromotion:
+		return "CapturePromotion"
+	default:
+		return "?"
+	}
+}
+
 // TODO(herohde) 2/21/2021: add remarks, like "dubious", to represent standard notation?
 
 // Move represents a not-necessarily legal move along with contextual metadata. 64bits.
@@ -24,7 +49,7 @@ type Move struct {
 	Type      MoveType
 	From, To  Square
 	Promotion Piece // desired piece for promotion, if any.
-	Capture   Piece // captured piece, if any.
+	Capture   Piece // captured piece, if any. Not set if EnPassant.
 	Score     Score
 }
 
@@ -62,8 +87,5 @@ func (m Move) Equals(o Move) bool {
 }
 
 func (m Move) String() string {
-	if m.Promotion.IsValid() {
-		return fmt.Sprintf("%v%v%v", m.From, m.To, m.Promotion)
-	}
-	return fmt.Sprintf("%v%v", m.From, m.To)
+	return fmt.Sprintf("%v%v[Type=%v, Capture=%v, Promotion=%v, Score=%v]", m.From, m.To, m.Type, m.Capture, m.Promotion, m.Score)
 }

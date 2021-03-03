@@ -13,7 +13,7 @@ const (
 )
 
 const (
-	FullCastingRights = WhiteQueenSideCastle | WhiteQueenSideCastle | BlackKingSideCastle | BlackQueenSideCastle
+	FullCastingRights = WhiteKingSideCastle | WhiteQueenSideCastle | BlackKingSideCastle | BlackQueenSideCastle
 )
 
 // IsAllowed returns true iff all the given rights are allowed.
