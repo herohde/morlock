@@ -39,6 +39,90 @@ func NewPosition(pieces []Placement, castling Castling, ep Square) (*Position, e
 	return ret, nil
 }
 
+// Move attempts to make a pseudo-legal move. The attempted move is assumed to be
+// pseudo-legal and generated from the position. Returns false if not legal.
+func (p *Position) Move(m Move) (*Position, bool) {
+	ret := *p
+
+	// (1) Remove piece from "from" square.
+
+	turn, piece, ok := p.Square(m.From)
+	if !ok {
+		return nil, false
+	}
+	ret.xor(m.From, turn, piece)
+
+	// (2) Remove any captured piece.
+
+	if m.Type == Capture || m.Type == CapturePromotion {
+		ret.xor(m.To, turn.Opponent(), m.Capture)
+	}
+
+	// (3) Add piece to "to" square.
+
+	if m.Type == Promotion || m.Type == CapturePromotion {
+		piece = m.Promotion
+	}
+	ret.xor(m.To, turn, piece)
+
+	// (4) Handle special moves/captures.
+
+	switch m.Type {
+	case EnPassant:
+		var capture Square
+		if turn == White {
+			capture = NewSquare(m.To.File(), Rank5)
+		} else {
+			capture = NewSquare(m.To.File(), Rank4)
+		}
+		ret.xor(capture, turn.Opponent(), Pawn)
+
+	case KingSideCastle, QueenSideCastle:
+		for _, sq := range safeCastlingSquares(turn, m.Type) {
+			if p.IsAttacked(turn, sq) {
+				return nil, false
+			}
+		}
+		for _, sq := range rookSquares(turn, m.Type) {
+			ret.xor(sq, turn, Rook)
+		}
+	}
+
+	// (5) Update EnPassant status.
+
+	if m.Type == Jump {
+		if turn == White {
+			ret.enpassant = NewSquare(m.From.File(), Rank3)
+		} else {
+			ret.enpassant = NewSquare(m.From.File(), Rank6)
+		}
+	} else {
+		ret.enpassant = ZeroSquare
+	}
+
+	// (6) Update Castling status. If king moves, rights are lost. Ditto if rook moves or is captured.
+
+	if m.From == E1 || m.From == A1 || m.To == A1 {
+		ret.castling &^= WhiteQueenSideCastle
+	}
+	if m.From == E1 || m.From == H1 || m.To == H1 {
+		ret.castling &^= WhiteKingSideCastle
+	}
+	if m.From == E8 || m.From == A8 || m.To == A8 {
+		ret.castling &^= BlackQueenSideCastle
+	}
+	if m.From == E8 || m.From == H8 || m.To == H8 {
+		ret.castling &^= BlackKingSideCastle
+	}
+
+	// (7) Validate that move does not leave own king in check.
+
+	if ret.IsChecked(turn) {
+		return nil, false
+	}
+	return &ret, true
+}
+
 // Castling returns the castling rights.
 func (p *Position) Castling() Castling {
 	return p.castling
@@ -102,9 +186,9 @@ func (p *Position) IsChecked(c Color) bool {
 }
 
 var (
-	whiteKingSideCastlingMask = BitMask(G1) | BitMask(F1)
-    whiteQueenSideCastlingMask = BitMask(B1) | BitMask(C1) | BitMask(D1)
-	blackKingSideCastlingMask = BitMask(G8) | BitMask(F8)
+	whiteKingSideCastlingMask  = BitMask(G1) | BitMask(F1)
+	whiteQueenSideCastlingMask = BitMask(B1) | BitMask(C1) | BitMask(D1)
+	blackKingSideCastlingMask  = BitMask(G8) | BitMask(F8)
 	blackQueenSideCastlingMask = BitMask(B8) | BitMask(C8) | BitMask(D8)
 )
 
@@ -120,24 +204,34 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 
 	var ret []Move
 
-	rooks := p.pieces[turn][Queen] | p.pieces[turn][Rook]
+	queens := p.pieces[turn][Queen]
+	for queens != EmptyBitboard {
+		from := queens.LastPopSquare()
+		queens ^= BitMask(from)
+
+		attackboard := (RookAttackboard(p.rotated, from) | BishopAttackboard(p.rotated, from)) & mask
+		p.emitMove(Normal, Queen, from, attackboard&moves, &ret)
+		p.emitMove(Capture, Queen, from, attackboard&captures, &ret)
+	}
+
+	rooks := p.pieces[turn][Rook]
 	for rooks != EmptyBitboard {
 		from := rooks.LastPopSquare()
 		rooks ^= BitMask(from)
 
 		attackboard := RookAttackboard(p.rotated, from) & mask
-		p.emitMove(Normal, from, attackboard&moves, &ret)
-		p.emitMove(Capture, from, attackboard&captures, &ret)
+		p.emitMove(Normal, Rook, from, attackboard&moves, &ret)
+		p.emitMove(Capture, Rook, from, attackboard&captures, &ret)
 	}
 
-	bishops := p.pieces[turn][Queen] | p.pieces[turn][Bishop]
+	bishops := p.pieces[turn][Bishop]
 	for bishops != EmptyBitboard {
 		from := bishops.LastPopSquare()
 		bishops ^= BitMask(from)
 
 		attackboard := BishopAttackboard(p.rotated, from) & mask
-		p.emitMove(Normal, from, attackboard&moves, &ret)
-		p.emitMove(Capture, from, attackboard&captures, &ret)
+		p.emitMove(Normal, Bishop, from, attackboard&moves, &ret)
+		p.emitMove(Capture, Bishop, from, attackboard&captures, &ret)
 	}
 
 	knights := p.pieces[turn][Knight]
@@ -146,8 +240,8 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 		knights ^= BitMask(from)
 
 		attackboard := KnightAttackboard(from) & mask
-		p.emitMove(Normal, from, attackboard&moves, &ret)
-		p.emitMove(Capture, from, attackboard&captures, &ret)
+		p.emitMove(Normal, Knight, from, attackboard&moves, &ret)
+		p.emitMove(Capture, Knight, from, attackboard&captures, &ret)
 	}
 
 	pawns := p.pieces[turn][Pawn]
@@ -160,15 +254,15 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 		pushboard := PawnMoveboard(p.rotated.rot, turn, origin)
 		jumpboard := PawnMoveboard(p.rotated.rot, turn, pushboard) & jumps
 
-		p.emitMove(Capture, from, captureboard & captures &^ promos, &ret)
-		p.emitMove(Push, from, pushboard &^ promos, &ret)
-		p.emitMove(Jump, from, jumpboard, &ret)
+		p.emitMove(Capture, Pawn, from, captureboard&captures&^promos, &ret)
+		p.emitMove(Push, Pawn, from, pushboard&^promos, &ret)
+		p.emitMove(Jump, Pawn, from, jumpboard, &ret)
 
-		p.emitPromo(CapturePromotion, from, captureboard & captures & promos, &ret)
-		p.emitPromo(Promotion, from, pushboard & promos, &ret)
+		p.emitPromo(CapturePromotion, Pawn, from, captureboard&captures&promos, &ret)
+		p.emitPromo(Promotion, Pawn, from, pushboard&promos, &ret)
 
 		if p.enpassant != ZeroSquare {
-			p.emitMove(EnPassant, from, captureboard & BitMask(p.enpassant), &ret)
+			p.emitMove(EnPassant, Pawn, from, captureboard&BitMask(p.enpassant), &ret)
 		}
 	}
 
@@ -176,22 +270,22 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 		from := king.LastPopSquare()
 
 		attackboard := KingAttackboard(from) & mask
-		p.emitMove(Normal, from, attackboard&moves, &ret)
-		p.emitMove(Capture, from, attackboard&captures, &ret)
+		p.emitMove(Normal, King, from, attackboard&moves, &ret)
+		p.emitMove(Capture, King, from, attackboard&captures, &ret)
 
 		if turn == White {
-			if p.castling.IsAllowed(WhiteKingSideCastle) && (whiteKingSideCastlingMask&p.rotated.rot) == 0 {
-				p.emitMove(KingSideCastle, from, BitMask(G1), &ret)
+			if p.castling.IsAllowed(WhiteKingSideCastle) && (whiteKingSideCastlingMask&p.rotated.rot) == 0 && p.pieces[turn][Rook]&BitMask(H1) != 0 {
+				p.emitMove(KingSideCastle, King, from, BitMask(G1), &ret)
 			}
-			if p.castling.IsAllowed(WhiteQueenSideCastle) && (whiteQueenSideCastlingMask&p.rotated.rot) == 0 {
-				p.emitMove(QueenSideCastle, from, BitMask(C1), &ret)
+			if p.castling.IsAllowed(WhiteQueenSideCastle) && (whiteQueenSideCastlingMask&p.rotated.rot) == 0 && p.pieces[turn][Rook]&BitMask(A1) != 0 {
+				p.emitMove(QueenSideCastle, King, from, BitMask(C1), &ret)
 			}
 		} else {
-			if p.castling.IsAllowed(BlackKingSideCastle) && (blackKingSideCastlingMask&p.rotated.rot) == 0 {
-				p.emitMove(KingSideCastle, from, BitMask(G8), &ret)
+			if p.castling.IsAllowed(BlackKingSideCastle) && (blackKingSideCastlingMask&p.rotated.rot) == 0 && p.pieces[turn][Rook]&BitMask(H8) != 0 {
+				p.emitMove(KingSideCastle, King, from, BitMask(G8), &ret)
 			}
-			if p.castling.IsAllowed(BlackQueenSideCastle) && (blackQueenSideCastlingMask&p.rotated.rot) == 0 {
-				p.emitMove(QueenSideCastle, from, BitMask(C8), &ret)
+			if p.castling.IsAllowed(BlackQueenSideCastle) && (blackQueenSideCastlingMask&p.rotated.rot) == 0 && p.pieces[turn][Rook]&BitMask(A8) != 0 {
+				p.emitMove(QueenSideCastle, King, from, BitMask(C8), &ret)
 			}
 		}
 	}
@@ -199,7 +293,7 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 	return ret
 }
 
-func (p *Position) emitMove(t MoveType, from Square, attackboard Bitboard, out *[]Move) {
+func (p *Position) emitMove(t MoveType, piece Piece, from Square, attackboard Bitboard, out *[]Move) {
 	for attackboard != EmptyBitboard {
 		to := attackboard.LastPopSquare()
 		attackboard ^= BitMask(to)
@@ -208,11 +302,11 @@ func (p *Position) emitMove(t MoveType, from Square, attackboard Bitboard, out *
 		if t == Capture {
 			_, capture, _ = p.Square(to)
 		}
-		*out = append(*out, Move{Type: t, From: from, To: to, Capture: capture})
+		*out = append(*out, Move{Type: t, Piece: piece, From: from, To: to, Capture: capture})
 	}
 }
 
-func (p *Position) emitPromo(t MoveType, from Square, attackboard Bitboard, out *[]Move) {
+func (p *Position) emitPromo(t MoveType, piece Piece, from Square, attackboard Bitboard, out *[]Move) {
 	for attackboard != EmptyBitboard {
 		to := attackboard.LastPopSquare()
 		attackboard ^= BitMask(to)
@@ -225,7 +319,7 @@ func (p *Position) emitPromo(t MoveType, from Square, attackboard Bitboard, out 
 		// Emit under-promotions as well.
 
 		for _, pc := range []Piece{Queen, Rook, Knight, Bishop} {
-			*out = append(*out, Move{Type: t, From: from, To: to, Capture: capture, Promotion: pc})
+			*out = append(*out, Move{Type: t, Piece: piece, From: from, To: to, Capture: capture, Promotion: pc})
 		}
 	}
 }
@@ -262,4 +356,51 @@ func printPiece(c Color, p Piece) string {
 		return strings.ToUpper(p.String())
 	}
 	return strings.ToLower(p.String())
+}
+
+// safeCastlingSquares returns the squares that must not be in check to castle.
+// Does not include the king to square.
+func safeCastlingSquares(c Color, t MoveType) []Square {
+	if c == White {
+		switch t {
+		case KingSideCastle:
+			return []Square{E1, F1}
+		case QueenSideCastle:
+			return []Square{E1, D1}
+		default:
+			return nil
+		}
+	} else {
+		switch t {
+		case KingSideCastle:
+			return []Square{E8, F8}
+		case QueenSideCastle:
+			return []Square{E8, D8}
+		default:
+			return nil
+		}
+	}
+}
+
+// rookSquares return the rook squares for castling.
+func rookSquares(c Color, t MoveType) []Square {
+	if c == White {
+		switch t {
+		case KingSideCastle:
+			return []Square{F1, H1}
+		case QueenSideCastle:
+			return []Square{A1, D1}
+		default:
+			return nil
+		}
+	} else {
+		switch t {
+		case KingSideCastle:
+			return []Square{F8, H8}
+		case QueenSideCastle:
+			return []Square{A8, D8}
+		default:
+			return nil
+		}
+	}
 }

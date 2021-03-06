@@ -65,17 +65,17 @@ func (p Piece) String() string {
 	case NoPiece:
 		return "-"
 	case Pawn:
-		return "p"
+		return "P"
 	case Bishop:
-		return "b"
+		return "B"
 	case Knight:
-		return "n"
+		return "N"
 	case Rook:
-		return "r"
+		return "R"
 	case Queen:
-		return "q"
+		return "Q"
 	case King:
-		return "k"
+		return "K"
 	default:
 		return "?"
 	}

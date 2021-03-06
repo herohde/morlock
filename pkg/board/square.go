@@ -264,21 +264,21 @@ func (f File) V() int {
 func (f File) String() string {
 	switch f {
 	case FileA:
-		return "A"
+		return "a"
 	case FileB:
-		return "B"
+		return "b"
 	case FileC:
-		return "C"
+		return "c"
 	case FileD:
-		return "D"
+		return "d"
 	case FileE:
-		return "E"
+		return "e"
 	case FileF:
-		return "F"
+		return "f"
 	case FileG:
-		return "G"
+		return "g"
 	case FileH:
-		return "H"
+		return "h"
 	default:
 		return "?"
 	}

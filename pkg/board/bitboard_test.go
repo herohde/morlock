@@ -90,6 +90,8 @@ func TestAttackboard(t *testing.T) {
 			{board.EmptyBitboard, board.D3, "---X----/---X----/---X----/---X----/---X----/XXX-XXXX/---X----/---X----"},
 			{board.EmptyBitboard, board.A6, "X-------/X-------/-XXXXXXX/X-------/X-------/X-------/X-------/X-------"},
 
+			{^board.EmptyBitboard, board.E7, "----X---/---X-X--/----X---/--------/--------/--------/--------/--------"},
+
 			{board.BitMask(board.H2), board.H1, "--------/--------/--------/--------/--------/--------/-------X/XXXXXXX-"},
 			{board.BitRank(board.Rank2), board.H1, "--------/--------/--------/--------/--------/--------/-------X/XXXXXXX-"},
 			{board.BitMask(board.H2) | board.BitMask(board.D1), board.H1, "--------/--------/--------/--------/--------/--------/-------X/---XXXX-"},
@@ -111,14 +113,17 @@ func TestAttackboard(t *testing.T) {
 			{board.EmptyBitboard, board.H1, "X-------/-X------/--X-----/---X----/----X---/-----X--/------X-/--------"},
 			{board.EmptyBitboard, board.D3, "--------/-------X/X-----X-/-X---X--/--X-X---/--------/--X-X---/-X---X--"},
 			{board.EmptyBitboard, board.A6, "--X-----/-X------/--------/-X------/--X-----/---X----/----X---/-----X--"},
+			{board.EmptyBitboard, board.E7, "---X-X--/--------/---X-X--/--X---X-/-X-----X/X-------/--------/--------"},
+
+			{^board.EmptyBitboard, board.E7, "---X-X--/--------/---X-X--/--------/--------/--------/--------/--------"},
 
 			{board.BitRank(board.Rank2), board.H1, "--------/--------/--------/--------/--------/--------/------X-/--------"},
 			{board.BitRank(board.Rank2), board.D3, "--------/-------X/X-----X-/-X---X--/--X-X---/--------/--X-X---/--------"},
+			{board.BitMask(board.A3) | board.BitMask(board.B4) | board.BitMask(board.C5), board.C5, "-----X--/X---X---/-X-X----/--------/-X-X----/----X---/-----X--/------X-"},
 		}
 
 		for _, tt := range tests {
 			assert.Equal(t, board.BishopAttackboard(board.NewRotatedBitboard(tt.bb), tt.sq).String(), tt.expected)
 		}
 	})
-
 }

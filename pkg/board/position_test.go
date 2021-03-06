@@ -2,6 +2,7 @@ package board_test
 
 import (
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -11,11 +12,11 @@ import (
 func TestPseudoLegalMoves(t *testing.T) {
 
 	t.Run("pawns", func(t *testing.T) {
-		tests := []struct{
-			turn  board.Color
-			pieces []board.Placement
+		tests := []struct {
+			turn      board.Color
+			pieces    []board.Placement
 			enpassant board.Square
-			expected []board.Move
+			expected  []board.Move
 		}{
 			{ // Empty board
 				board.White,
@@ -31,9 +32,9 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.ZeroSquare,
 				[]board.Move{
-					{Type: board.Push, From: board.E2, To: board.E3},
-					{Type: board.Jump, From: board.E2, To: board.E4},
-					{Type: board.Push, From: board.G5, To: board.G6},
+					{Type: board.Push, Piece: board.Pawn, From: board.E2, To: board.E3},
+					{Type: board.Jump, Piece: board.Pawn, From: board.E2, To: board.E4},
+					{Type: board.Push, Piece: board.Pawn, From: board.G5, To: board.G6},
 				},
 			},
 			{ // Pawn @ C7,G6
@@ -44,9 +45,9 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.ZeroSquare,
 				[]board.Move{
-					{Type: board.Push, From: board.G6, To: board.G5},
-					{Type: board.Push, From: board.C7, To: board.C6},
-					{Type: board.Jump, From: board.C7, To: board.C5},
+					{Type: board.Push, Piece: board.Pawn, From: board.G6, To: board.G5},
+					{Type: board.Push, Piece: board.Pawn, From: board.C7, To: board.C6},
+					{Type: board.Jump, Piece: board.Pawn, From: board.C7, To: board.C5},
 				},
 			},
 			{ // Pawn @ E2,H6 -- obstructed w/ capture
@@ -63,9 +64,9 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.ZeroSquare,
 				[]board.Move{
-					{Type: board.Capture, From: board.E2, To: board.D3, Capture: board.Knight},
-					{Type: board.Push, From: board.E2, To: board.E3},
-					{Type: board.Capture, From: board.H5, To: board.G6, Capture: board.Bishop},
+					{Type: board.Capture, Piece: board.Pawn, From: board.E2, To: board.D3, Capture: board.Knight},
+					{Type: board.Push, Piece: board.Pawn, From: board.E2, To: board.E3},
+					{Type: board.Capture, Piece: board.Pawn, From: board.H5, To: board.G6, Capture: board.Bishop},
 				},
 			},
 			{ // Pawn @ D7
@@ -75,10 +76,10 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.ZeroSquare,
 				[]board.Move{
-					{Type: board.Promotion, From: board.D7, To: board.D8, Promotion: board.Queen},
-					{Type: board.Promotion, From: board.D7, To: board.D8, Promotion: board.Rook},
-					{Type: board.Promotion, From: board.D7, To: board.D8, Promotion: board.Knight},
-					{Type: board.Promotion, From: board.D7, To: board.D8, Promotion: board.Bishop},
+					{Type: board.Promotion, Piece: board.Pawn, From: board.D7, To: board.D8, Promotion: board.Queen},
+					{Type: board.Promotion, Piece: board.Pawn, From: board.D7, To: board.D8, Promotion: board.Rook},
+					{Type: board.Promotion, Piece: board.Pawn, From: board.D7, To: board.D8, Promotion: board.Knight},
+					{Type: board.Promotion, Piece: board.Pawn, From: board.D7, To: board.D8, Promotion: board.Bishop},
 				},
 			},
 			{ // Pawn @ C4,E4,F4 -- en passant
@@ -91,11 +92,11 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.D3,
 				[]board.Move{
-					{Type: board.Push, From: board.F4, To: board.F3},
-					{Type: board.Push, From: board.E4, To: board.E3},
-					{Type: board.EnPassant, From: board.E4, To: board.D3},
-					{Type: board.Push, From: board.C4, To: board.C3},
-					{Type: board.EnPassant, From: board.C4, To: board.D3},
+					{Type: board.Push, Piece: board.Pawn, From: board.F4, To: board.F3},
+					{Type: board.Push, Piece: board.Pawn, From: board.E4, To: board.E3},
+					{Type: board.EnPassant, Piece: board.Pawn, From: board.E4, To: board.D3},
+					{Type: board.Push, Piece: board.Pawn, From: board.C4, To: board.C3},
+					{Type: board.EnPassant, Piece: board.Pawn, From: board.C4, To: board.D3},
 				},
 			},
 		}
@@ -121,11 +122,11 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.A2, board.Black, board.Bishop},
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.A3, To: board.B2},
-					{Type: board.Normal, From: board.A3, To: board.B4},
-					{Type: board.Normal, From: board.A3, To: board.A4},
-					{Type: board.Capture, From: board.A3, To: board.A2, Capture: board.Bishop},
-					{Type: board.Capture, From: board.A3, To: board.B3, Capture: board.Rook},
+					{Type: board.Normal, Piece: board.King, From: board.A3, To: board.B2},
+					{Type: board.Normal, Piece: board.King, From: board.A3, To: board.B4},
+					{Type: board.Normal, Piece: board.King, From: board.A3, To: board.A4},
+					{Type: board.Capture, Piece: board.King, From: board.A3, To: board.A2, Capture: board.Bishop},
+					{Type: board.Capture, Piece: board.King, From: board.A3, To: board.B3, Capture: board.Rook},
 				},
 			},
 			{ // Knight @ A3
@@ -136,10 +137,10 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.C2, board.Black, board.Queen},
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.A3, To: board.C4},
-					{Type: board.Normal, From: board.A3, To: board.B5},
-					{Type: board.Capture, From: board.A3, To: board.B1, Capture: board.Rook},
-					{Type: board.Capture, From: board.A3, To: board.C2, Capture: board.Queen},
+					{Type: board.Normal, Piece: board.Knight, From: board.A3, To: board.C4},
+					{Type: board.Normal, Piece: board.Knight, From: board.A3, To: board.B5},
+					{Type: board.Capture, Piece: board.Knight, From: board.A3, To: board.B1, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Knight, From: board.A3, To: board.C2, Capture: board.Queen},
 				},
 			},
 			{ // Bishop @ G3 -- partly obstructed
@@ -149,11 +150,11 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.E5, board.Black, board.Rook},
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.G3, To: board.H2},
-					{Type: board.Normal, From: board.G3, To: board.H4},
-					{Type: board.Normal, From: board.G3, To: board.F4},
-					{Type: board.Capture, From: board.G3, To: board.F2, Capture: board.Rook},
-					{Type: board.Capture, From: board.G3, To: board.E5, Capture: board.Rook},
+					{Type: board.Normal, Piece: board.Bishop, From: board.G3, To: board.H2},
+					{Type: board.Normal, Piece: board.Bishop, From: board.G3, To: board.H4},
+					{Type: board.Normal, Piece: board.Bishop, From: board.G3, To: board.F4},
+					{Type: board.Capture, Piece: board.Bishop, From: board.G3, To: board.F2, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Bishop, From: board.G3, To: board.E5, Capture: board.Rook},
 				},
 			},
 			{ // Bishop @ D3
@@ -162,15 +163,14 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.C2, board.Black, board.Rook},
 					{board.C4, board.Black, board.Rook},
 					{board.F5, board.Black, board.Rook},
-
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.D3, To: board.F1},
-					{Type: board.Normal, From: board.D3, To: board.E2},
-					{Type: board.Normal, From: board.D3, To: board.E4},
-					{Type: board.Capture, From: board.D3, To: board.C2, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.C4, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.F5, Capture: board.Rook},
+					{Type: board.Normal, Piece: board.Bishop, From: board.D3, To: board.F1},
+					{Type: board.Normal, Piece: board.Bishop, From: board.D3, To: board.E2},
+					{Type: board.Normal, Piece: board.Bishop, From: board.D3, To: board.E4},
+					{Type: board.Capture, Piece: board.Bishop, From: board.D3, To: board.C2, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Bishop, From: board.D3, To: board.C4, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Bishop, From: board.D3, To: board.F5, Capture: board.Rook},
 				},
 			},
 			{ // Rook @ D3
@@ -181,13 +181,13 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.D5, board.Black, board.Queen},
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.D3, To: board.D1},
-					{Type: board.Normal, From: board.D3, To: board.D2},
-					{Type: board.Normal, From: board.D3, To: board.C3},
-					{Type: board.Normal, From: board.D3, To: board.D4},
-					{Type: board.Capture, From: board.D3, To: board.E3, Capture: board.Bishop},
-					{Type: board.Capture, From: board.D3, To: board.B3, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.D5, Capture: board.Queen},
+					{Type: board.Normal, Piece: board.Rook, From: board.D3, To: board.D1},
+					{Type: board.Normal, Piece: board.Rook, From: board.D3, To: board.D2},
+					{Type: board.Normal, Piece: board.Rook, From: board.D3, To: board.C3},
+					{Type: board.Normal, Piece: board.Rook, From: board.D3, To: board.D4},
+					{Type: board.Capture, Piece: board.Rook, From: board.D3, To: board.E3, Capture: board.Bishop},
+					{Type: board.Capture, Piece: board.Rook, From: board.D3, To: board.B3, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Rook, From: board.D3, To: board.D5, Capture: board.Queen},
 				},
 			},
 			{ // Queen @ D3 -- union of bishop/rook above
@@ -201,19 +201,19 @@ func TestPseudoLegalMoves(t *testing.T) {
 					{board.D5, board.Black, board.Queen},
 				},
 				[]board.Move{
-					{Type: board.Normal, From: board.D3, To: board.D1},
-					{Type: board.Normal, From: board.D3, To: board.D2},
-					{Type: board.Normal, From: board.D3, To: board.C3},
-					{Type: board.Normal, From: board.D3, To: board.D4},
-					{Type: board.Capture, From: board.D3, To: board.E3, Capture: board.Bishop},
-					{Type: board.Capture, From: board.D3, To: board.B3, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.D5, Capture: board.Queen},
-					{Type: board.Normal, From: board.D3, To: board.F1},
-					{Type: board.Normal, From: board.D3, To: board.E2},
-					{Type: board.Normal, From: board.D3, To: board.E4},
-					{Type: board.Capture, From: board.D3, To: board.C2, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.C4, Capture: board.Rook},
-					{Type: board.Capture, From: board.D3, To: board.F5, Capture: board.Rook},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.F1},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.D1},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.E2},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.D2},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.C3},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.E4},
+					{Type: board.Normal, Piece: board.Queen, From: board.D3, To: board.D4},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.C2, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.E3, Capture: board.Bishop},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.B3, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.C4, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.F5, Capture: board.Rook},
+					{Type: board.Capture, Piece: board.Queen, From: board.D3, To: board.D5, Capture: board.Queen},
 				},
 			},
 		}
@@ -228,9 +228,9 @@ func TestPseudoLegalMoves(t *testing.T) {
 	})
 
 	t.Run("castling", func(t *testing.T) {
-		tests := []struct{
-			turn  board.Color
-			pieces []board.Placement
+		tests := []struct {
+			turn     board.Color
+			pieces   []board.Placement
 			castling board.Castling
 			expected []board.Move
 		}{
@@ -253,8 +253,8 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.FullCastingRights,
 				[]board.Move{
-					{Type: board.KingSideCastle, From: board.E1, To: board.G1},
-					{Type: board.QueenSideCastle, From: board.E1, To: board.C1},
+					{Type: board.KingSideCastle, Piece: board.King, From: board.E1, To: board.G1},
+					{Type: board.QueenSideCastle, Piece: board.King, From: board.E1, To: board.C1},
 				},
 			},
 			{ // Obstructed
@@ -267,7 +267,7 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.FullCastingRights,
 				[]board.Move{
-					{Type: board.QueenSideCastle, From: board.E8, To: board.C8},
+					{Type: board.QueenSideCastle, Piece: board.King, From: board.E8, To: board.C8},
 				},
 			},
 			{ // Partial rights.
@@ -279,7 +279,7 @@ func TestPseudoLegalMoves(t *testing.T) {
 				},
 				board.BlackQueenSideCastle | board.WhiteKingSideCastle,
 				[]board.Move{
-					{Type: board.QueenSideCastle, From: board.E8, To: board.C8},
+					{Type: board.QueenSideCastle, Piece: board.King, From: board.E8, To: board.C8},
 				},
 			},
 		}
@@ -294,6 +294,24 @@ func TestPseudoLegalMoves(t *testing.T) {
 			assert.Equal(t, printMoves(tt.expected), printMoves(actual))
 		}
 	})
+}
+
+func TestPerft1(t *testing.T) {
+	tests := []struct {
+		fen      string
+		expected int
+	}{
+		// FEN: http://www.talkchess.com/forum3/viewtopic.php?t=48616. Missed Bc5xb4 due to BB mask off by one.
+		{"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/1PB1P1b1/P1NP1N2/2P1QPPP/R4RK1 b - b3 0 10", 45},
+	}
+
+	for _, tt := range tests {
+		pos, turn, _, _, err := fen.Decode(tt.fen)
+		assert.NoError(t, err)
+
+		moves := pos.PseudoLegalMoves(turn)
+		assert.Equal(t, len(moves), tt.expected)
+	}
 }
 
 func filterMoves(ms []board.Move, fn func(move board.Move) bool) []board.Move {

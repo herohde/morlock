@@ -24,9 +24,9 @@ func TestFile(t *testing.T) {
 	assert.True(t, board.FileH.IsValid())
 	assert.False(t, board.File(8).IsValid())
 
-	assert.Equal(t, board.FileA.String(), "A")
-	assert.Equal(t, board.FileG.String(), "G")
-	assert.Equal(t, board.File(3).String(), "E")
+	assert.Equal(t, board.FileA.String(), "a")
+	assert.Equal(t, board.FileG.String(), "g")
+	assert.Equal(t, board.File(3).String(), "e")
 }
 
 func TestSquare(t *testing.T) {
@@ -38,7 +38,7 @@ func TestSquare(t *testing.T) {
 	assert.True(t, board.A8.IsValid())
 	assert.False(t, board.Square(64).IsValid())
 
-	assert.Equal(t, board.H1.String(), "H1")
-	assert.Equal(t, board.A1.String(), "A1")
-	assert.Equal(t, board.Square(3).String(), "E1")
+	assert.Equal(t, board.H1.String(), "h1")
+	assert.Equal(t, board.A1.String(), "a1")
+	assert.Equal(t, board.Square(3).String(), "e1")
 }

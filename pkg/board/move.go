@@ -48,6 +48,7 @@ func (m MoveType) String() string {
 type Move struct {
 	Type      MoveType
 	From, To  Square
+	Piece     Piece // moved piece
 	Promotion Piece // desired piece for promotion, if any.
 	Capture   Piece // captured piece, if any. Not set if EnPassant.
 	Score     Score
@@ -87,5 +88,27 @@ func (m Move) Equals(o Move) bool {
 }
 
 func (m Move) String() string {
-	return fmt.Sprintf("%v%v[Type=%v, Capture=%v, Promotion=%v, Score=%v]", m.From, m.To, m.Type, m.Capture, m.Promotion, m.Score)
+	switch m.Type {
+	case Promotion:
+		return fmt.Sprintf("%v-%v=%v", m.From, m.To, m.Promotion)
+	case CapturePromotion:
+		return fmt.Sprintf("%v*%v=%v", m.From, m.To, m.Promotion)
+	case EnPassant:
+		return fmt.Sprintf("%v*%v e.p.", m.From, m.To)
+	case KingSideCastle:
+		return fmt.Sprintf("0-0")
+	case QueenSideCastle:
+		return fmt.Sprintf("0-0-0")
+	case Capture:
+		return fmt.Sprintf("%v%v*%v", ignorePawn(m.Piece), m.From, m.To)
+	default:
+		return fmt.Sprintf("%v%v-%v", ignorePawn(m.Piece), m.From, m.To)
+	}
+}
+
+func ignorePawn(piece Piece) string {
+	if piece == Pawn {
+		return ""
+	}
+	return piece.String()
 }

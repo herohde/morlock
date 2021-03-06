@@ -71,9 +71,9 @@ func PawnCaptureboard(c Color, pawns Bitboard) Bitboard {
 // PawnMoveboard returns all potential pawn sigle-step moves for the given color.
 func PawnMoveboard(all Bitboard, c Color, pawns Bitboard) Bitboard {
 	if c == White {
-		return (pawns<<8) & ^all
+		return (pawns << 8) & ^all
 	} else {
-		return (pawns>>8) & ^all
+		return (pawns >> 8) & ^all
 	}
 }
 
@@ -427,7 +427,7 @@ func init() {
 	// Attack: -X-XX
 
 	for sq := ZeroSquare; sq < NumSquares; sq++ {
-		for state := EmptyBitboard; state < Bitboard(mask45L[sq]); state++ {
+		for state := EmptyBitboard; state <= Bitboard(mask45L[sq]); state++ {
 			tmp := EmptyBitboard
 
 			// UpLeft: X<--B (rot45L)
@@ -451,7 +451,7 @@ func init() {
 	}
 
 	for sq := ZeroSquare; sq < NumSquares; sq++ {
-		for state := EmptyBitboard; state < Bitboard(mask45R[sq]); state++ {
+		for state := EmptyBitboard; state <= Bitboard(mask45R[sq]); state++ {
 			tmp := EmptyBitboard
 
 			// UpRight: B-->X (rot45R)
