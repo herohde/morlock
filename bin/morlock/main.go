@@ -5,12 +5,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/herohde/morlock/pkg/eval"
-	"github.com/herohde/morlock/pkg/search"
 	"os"
 
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/uci"
+	"github.com/herohde/morlock/pkg/eval"
+	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		e := engine.New(ctx, search.NewIterative(search.Minimax{Eval: eval.Material{}}))
+		e := engine.New(ctx, search.NewIterative(search.PVS{Eval: eval.Material{}}))
 
 		driver, out := uci.NewDriver(ctx, e, in)
 		go writeStdoutLines(ctx, out)

@@ -6,6 +6,15 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 10. mar 2021; Version 0.84 ###
+  - Engine working with material, PVS and UCI integration.
+  - Move generation passes perft.
+
+TODO:
+  - Pure material plays aimlessly in the endgame. Add Mate in X to eval?
+  - Add simple move ordering? MVV-LVA or just promo/captures first.
+  - Otherwise, focus on Turbochamp heuristics
+
 ### 20. feb 2021; Version 0.83 ###
   - Revived project! (yet again)
   - Plan to use Go as C has proven too cumbersome to sustain enthusiasm.
