@@ -13,7 +13,11 @@ const (
 )
 
 const (
+	NoCastlingRights  = Castling(0)
 	FullCastingRights = WhiteKingSideCastle | WhiteQueenSideCastle | BlackKingSideCastle | BlackQueenSideCastle
+
+	ZeroCastling = NoCastlingRights
+	NumCastling  = FullCastingRights + 1
 )
 
 // IsAllowed returns true iff all the given rights are allowed.

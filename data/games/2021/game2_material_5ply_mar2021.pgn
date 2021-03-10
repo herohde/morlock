@@ -1,0 +1,28 @@
+[Event "?"]
+[Site "?"]
+[Date "2021.03.09"]
+[Round "?"]
+[White "Henning"]
+[Black "Morlock (dev)"]
+[Result "1-0"]
+[ECO "B02"]
+[GameDuration "00:10:36"]
+[GameEndTime "2021-03-09T19:18:41.673 PST"]
+[GameStartTime "2021-03-09T19:08:05.444 PST"]
+[Opening "Alekhine's defense"]
+[PlyCount "45"]
+[Termination "time forfeit"]
+[TimeControl "40/300"]
+
+1. e4 Nf6 {+1.00/4 4.5s} 2. Nc3 {20s} Nc6 {+1.00/4 6.4s} 3. Nf3 {4.3s}
+Rg8 {+1.00/4 7.2s} 4. Bc4 {1.6s} Rh8 {+1.00/4 8.9s} 5. O-O {19s}
+Rg8 {+1.00/4 8.0s} 6. d4 {6.9s} Rh8 {+1.00/4 11s} 7. Bg5 {2.2s}
+Na5 {+1.00/4 13s} 8. Bd3 {24s} Rg8 {+1.00/4 9.9s} 9. a3 {36s} h6 {+1.00/4 9.4s}
+10. Bxf6 {12s} gxf6 {+1.00/4 6.8s} 11. Re1 {1.6s} Rg4 {+1.00/4 8.2s}
+12. Ne5 {14s} Rh4 {+1.00/4 12s} 13. Nc4 {23s} Nc6 {+1.00/4 8.9s} 14. Ne2 {22s}
+Rg4 {0.00/4 6.0s} 15. Ng3 {7.8s} Rh4 {+1.00/4 10s} 16. c3 {1.4s}
+Rf4 {+1.00/4 11s} 17. Qh5 {8.3s} d6 {+2.00/4 13s} 18. h3 {9.6s}
+Be6 {+2.00/4 23s} 19. d5 {22s} Qd7 {+2.00/4 21s} 20. dxe6 {33s}
+Qxe6 {+6.00/4 21s} 21. Nf5 {2.7s} d5 {+4.00/4 30s} 22. exd5 {15s}
+Qd7 {+5.00/4 46s} 23. dxc6 {43s, Black loses on time} 1-0
+

@@ -1,12 +1,15 @@
 package board
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // MoveType indicates the type of move. The no-progress counter is reset with any non-Normal move.
 type MoveType uint8
 
 const (
-	Normal    MoveType = iota
+	Normal    MoveType = 1 + iota
 	Push               // Pawn move
 	Jump               // Pawn 2-square move
 	EnPassant          // Implicitly a pawn capture
@@ -83,6 +86,69 @@ func ParseMove(str string) (Move, error) {
 	return Move{From: from, To: to}, nil
 }
 
+// EnPassantTarget return the e.p target square, if a Jump move. For e2-e4, it turns e3.
+func (m Move) EnPassantTarget() (Square, bool) {
+	if m.Type != Jump {
+		return 0, false
+	}
+
+	if m.To.Rank() == Rank4 { // White
+		return NewSquare(m.To.File(), Rank3), true
+	} else {
+		return NewSquare(m.To.File(), Rank6), true
+	}
+}
+
+// EnPassantCapture return the e.p capture square, if a EnPassant move. For d4*e3 e.p, it turns e4.
+func (m Move) EnPassantCapture() (Square, bool) {
+	if m.Type != EnPassant {
+		return 0, false
+	}
+
+	if m.To.Rank() == Rank3 { // Black
+		return NewSquare(m.To.File(), Rank4), true
+	} else {
+		return NewSquare(m.To.File(), Rank5), true
+	}
+}
+
+// CastlingRookMove returns the implicit rook move (from, to), if a KingSideCastle or QueenSideCastle move.
+func (m Move) CastlingRookMove() (Square, Square, bool) {
+	switch {
+	case m.Type == KingSideCastle && m.From == E1:
+		return H1, F1, true
+	case m.Type == QueenSideCastle && m.From == E1:
+		return A1, D1, true
+	case m.Type == KingSideCastle && m.From == E8:
+		return H8, F8, true
+	case m.Type == QueenSideCastle && m.From == E8:
+		return A8, D8, true
+	default:
+		return 0, 0, false
+	}
+}
+
+// CastlingRightsLost returns the castling rights that are definitely not present after this move.
+// If king moves, rights are lost. Ditto if rook moves or is captured.
+func (m Move) CastlingRightsLost() Castling {
+	switch {
+	case m.From == E1:
+		return WhiteKingSideCastle | WhiteQueenSideCastle
+	case m.From == A1 || m.To == A1:
+		return WhiteQueenSideCastle
+	case m.From == H1 || m.To == H1:
+		return WhiteKingSideCastle
+	case m.From == E8:
+		return BlackKingSideCastle | BlackQueenSideCastle
+	case m.From == A8 || m.To == A8:
+		return BlackQueenSideCastle
+	case m.From == H8 || m.To == H8:
+		return BlackKingSideCastle
+	default:
+		return NoCastlingRights
+	}
+}
+
 func (m Move) Equals(o Move) bool {
 	return m.From == o.From && m.To == o.To && m.Promotion == o.Promotion
 }
@@ -104,6 +170,15 @@ func (m Move) String() string {
 	default:
 		return fmt.Sprintf("%v%v-%v", ignorePawn(m.Piece), m.From, m.To)
 	}
+}
+
+// FormatMoves formats a list of moves.
+func FormatMoves(list []Move, fn func(Move) string) string {
+	var ret []string
+	for _, m := range list {
+		ret = append(ret, fn(m))
+	}
+	return strings.Join(ret, " ")
 }
 
 func ignorePawn(piece Piece) string {

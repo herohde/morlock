@@ -69,12 +69,7 @@ func (p *Position) Move(m Move) (*Position, bool) {
 
 	switch m.Type {
 	case EnPassant:
-		var capture Square
-		if turn == White {
-			capture = NewSquare(m.To.File(), Rank5)
-		} else {
-			capture = NewSquare(m.To.File(), Rank4)
-		}
+		capture, _ := m.EnPassantCapture()
 		ret.xor(capture, turn.Opponent(), Pawn)
 
 	case KingSideCastle, QueenSideCastle:
@@ -83,37 +78,16 @@ func (p *Position) Move(m Move) (*Position, bool) {
 				return nil, false
 			}
 		}
-		for _, sq := range rookSquares(turn, m.Type) {
-			ret.xor(sq, turn, Rook)
-		}
+
+		from, to, _ := m.CastlingRookMove()
+		ret.xor(from, turn, Rook)
+		ret.xor(to, turn, Rook)
 	}
 
-	// (5) Update EnPassant status.
+	// (5) Update EnPassant and castling status.
 
-	if m.Type == Jump {
-		if turn == White {
-			ret.enpassant = NewSquare(m.From.File(), Rank3)
-		} else {
-			ret.enpassant = NewSquare(m.From.File(), Rank6)
-		}
-	} else {
-		ret.enpassant = ZeroSquare
-	}
-
-	// (6) Update Castling status. If king moves, rights are lost. Ditto if rook moves or is captured.
-
-	if m.From == E1 || m.From == A1 || m.To == A1 {
-		ret.castling &^= WhiteQueenSideCastle
-	}
-	if m.From == E1 || m.From == H1 || m.To == H1 {
-		ret.castling &^= WhiteKingSideCastle
-	}
-	if m.From == E8 || m.From == A8 || m.To == A8 {
-		ret.castling &^= BlackQueenSideCastle
-	}
-	if m.From == E8 || m.From == H8 || m.To == H8 {
-		ret.castling &^= BlackKingSideCastle
-	}
+	ret.enpassant, _ = m.EnPassantTarget()
+	ret.castling &^= m.CastlingRightsLost()
 
 	// (7) Validate that move does not leave own king in check.
 
@@ -132,6 +106,26 @@ func (p *Position) Castling() Castling {
 // after e2e4, the en passant target square is e3 whether or not black has pawns on d4 or f4.
 func (p *Position) EnPassant() (Square, bool) {
 	return p.enpassant, p.enpassant != ZeroSquare
+}
+
+// Rotated returns the rotated bitboard.
+func (p *Position) Rotated() RotatedBitboard {
+	return p.rotated
+}
+
+// All returns a bitboard contains all pirces.
+func (p *Position) All() Bitboard {
+	return p.rotated.rot
+}
+
+// Color returns the bitboard for a given color.
+func (p *Position) Color(c Color) Bitboard {
+	return p.pieces[c][NoPiece]
+}
+
+// Piece returns the bitboard for a given color/piece.
+func (p *Position) Piece(c Color, piece Piece) Bitboard {
+	return p.pieces[c][piece]
 }
 
 // Square returns the content of the given square. Returns false is no piece present.
@@ -183,6 +177,29 @@ func (p *Position) IsChecked(c Color) bool {
 		return p.IsAttacked(c, pos)
 	}
 	return false
+}
+
+var (
+	whiteSquareMask = Bitboard(0xaaaaaaaaaaaaaaaa)
+)
+
+// HasInsufficientMaterial returns true iff there is not sufficient material for either side to win.
+// The cases are: K v K, KN v K, KB v KB (or KBB v K) w/ Bishops on same square color. Assumes 2 kings.
+func (p *Position) HasInsufficientMaterial() bool {
+	switch p.rotated.rot.PopCount() {
+	case 2:
+		return true
+	case 3:
+		weak := p.pieces[White][Knight] | p.pieces[Black][Knight] | p.pieces[White][Bishop] | p.pieces[Black][Bishop]
+		return weak.PopCount() == 1
+
+	case 4:
+		bishops := p.pieces[White][Bishop] | p.pieces[Black][Bishop]
+		return bishops.PopCount() == 2 && (whiteSquareMask&bishops).PopCount() != 1
+
+	default:
+		return false
+	}
 }
 
 var (

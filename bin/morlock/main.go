@@ -1,27 +1,56 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
-	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/eval"
+	"github.com/herohde/morlock/pkg/search"
+	"os"
 
-	"github.com/seekerror/build"
+	"github.com/herohde/morlock/pkg/engine"
+	"github.com/herohde/morlock/pkg/engine/uci"
 	"github.com/seekerror/logw"
 )
-
-var version = build.NewVersion(0, 83, 0)
 
 func main() {
 	flag.Parse()
 	ctx := context.Background()
 
-	logw.Exitf(ctx, "Morlock %v exited", version)
+	in := readStdinLines(ctx)
+	switch <-in {
+	case uci.ProtocolName:
+		// Use UCI protocol.
+
+		e := engine.New(ctx, search.NewIterative(search.Minimax{Eval: eval.Material{}}))
+
+		driver, out := uci.NewDriver(ctx, e, in)
+		go writeStdoutLines(ctx, out)
+
+		<-driver.Closed()
+	}
+
+	logw.Exitf(ctx, "Morlock exited")
 }
 
-func Foo(m board.Move) string {
-	if m.Promotion.IsValid() {
-		return fmt.Sprintf("%v%v%v", m.From, m.To, m.Promotion)
+func readStdinLines(ctx context.Context) <-chan string {
+	ret := make(chan string, 1)
+	go func() {
+		defer close(ret)
+
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			logw.Debugf(ctx, "<< %v", scanner.Text())
+			ret <- scanner.Text()
+		}
+	}()
+	return ret
+}
+
+func writeStdoutLines(ctx context.Context, out <-chan string) {
+	for line := range out {
+		logw.Debugf(ctx, ">> %v", line)
+		_, _ = fmt.Fprintln(os.Stdout, line)
 	}
-	return fmt.Sprintf("%v%v", m.From, m.To)
 }
