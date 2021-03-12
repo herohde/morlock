@@ -156,17 +156,10 @@ func (p *Position) IsEmpty(sq Square) bool {
 func (p *Position) IsAttacked(c Color, sq Square) bool {
 	opp := c.Opponent()
 
-	if bishops := p.pieces[opp][Bishop] | p.pieces[opp][Queen]; bishops != 0 && BishopAttackboard(p.rotated, sq)&bishops != 0 {
-		return true
-	}
-	if knights := p.pieces[opp][Knight]; knights != 0 && KnightAttackboard(sq)&knights != 0 {
-		return true
-	}
-	if rooks := p.pieces[opp][Rook] | p.pieces[opp][Queen]; rooks != 0 && RookAttackboard(p.rotated, sq)&rooks != 0 {
-		return true
-	}
-	if kings := p.pieces[opp][King]; kings != 0 && KingAttackboard(sq)&kings != 0 {
-		return true
+	for _, piece := range []Piece{King, Queen, Rook, Bishop, Knight} {
+		if pieces := p.pieces[opp][piece]; pieces != 0 && Attackboard(p.rotated, sq, piece)&pieces != 0 {
+			return true
+		}
 	}
 	return PawnCaptureboard(opp, p.pieces[opp][Pawn])&BitMask(sq) != 0
 }
@@ -177,6 +170,11 @@ func (p *Position) IsChecked(c Color) bool {
 		return p.IsAttacked(c, pos)
 	}
 	return false
+}
+
+// IsCheckMate returns true iff the color is checkmate. Convenient for IsChecked && len(LegalMoves)==0.
+func (p *Position) IsCheckMate(c Color) bool {
+	return p.IsChecked(c) && len(p.LegalMoves(c)) == 0
 }
 
 var (
@@ -209,6 +207,17 @@ var (
 	blackQueenSideCastlingMask = BitMask(B8) | BitMask(C8) | BitMask(D8)
 )
 
+// LegalMoves returns a list of all legal moves. Convenience function.
+func (p *Position) LegalMoves(turn Color) []Move {
+	var ret []Move
+	for _, m := range p.PseudoLegalMoves(turn) {
+		if _, ok := p.Move(m); ok {
+			ret = append(ret, m)
+		}
+	}
+	return ret
+}
+
 // PseudoLegalMoves returns a list of all pseudo-legal moves. The move may not respect
 // either side being in check, which must be validated subsequently.
 func (p *Position) PseudoLegalMoves(turn Color) []Move {
@@ -221,44 +230,16 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 
 	var ret []Move
 
-	queens := p.pieces[turn][Queen]
-	for queens != EmptyBitboard {
-		from := queens.LastPopSquare()
-		queens ^= BitMask(from)
+	for _, piece := range []Piece{Queen, Rook, Bishop, Knight} {
+		pieces := p.pieces[turn][piece]
+		for pieces != EmptyBitboard {
+			from := pieces.LastPopSquare()
+			pieces ^= BitMask(from)
 
-		attackboard := (RookAttackboard(p.rotated, from) | BishopAttackboard(p.rotated, from)) & mask
-		p.emitMove(Normal, Queen, from, attackboard&moves, &ret)
-		p.emitMove(Capture, Queen, from, attackboard&captures, &ret)
-	}
-
-	rooks := p.pieces[turn][Rook]
-	for rooks != EmptyBitboard {
-		from := rooks.LastPopSquare()
-		rooks ^= BitMask(from)
-
-		attackboard := RookAttackboard(p.rotated, from) & mask
-		p.emitMove(Normal, Rook, from, attackboard&moves, &ret)
-		p.emitMove(Capture, Rook, from, attackboard&captures, &ret)
-	}
-
-	bishops := p.pieces[turn][Bishop]
-	for bishops != EmptyBitboard {
-		from := bishops.LastPopSquare()
-		bishops ^= BitMask(from)
-
-		attackboard := BishopAttackboard(p.rotated, from) & mask
-		p.emitMove(Normal, Bishop, from, attackboard&moves, &ret)
-		p.emitMove(Capture, Bishop, from, attackboard&captures, &ret)
-	}
-
-	knights := p.pieces[turn][Knight]
-	for knights != EmptyBitboard {
-		from := knights.LastPopSquare()
-		knights ^= BitMask(from)
-
-		attackboard := KnightAttackboard(from) & mask
-		p.emitMove(Normal, Knight, from, attackboard&moves, &ret)
-		p.emitMove(Capture, Knight, from, attackboard&captures, &ret)
+			attackboard := Attackboard(p.rotated, from, piece) & mask
+			p.emitMove(Normal, piece, from, attackboard&moves, &ret)
+			p.emitMove(Capture, piece, from, attackboard&captures, &ret)
+		}
 	}
 
 	pawns := p.pieces[turn][Pawn]

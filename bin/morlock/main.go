@@ -5,11 +5,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/herohde/morlock/pkg/turochamp"
 	"os"
 
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/uci"
-	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 )
@@ -23,7 +23,7 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		e := engine.New(ctx, search.NewIterative(search.PVS{Eval: eval.Material{}}))
+		e := engine.New(ctx, search.NewIterative(search.PVS{Eval: turochamp.Eval{}}, 2))
 
 		driver, out := uci.NewDriver(ctx, e, in)
 		go writeStdoutLines(ctx, out)

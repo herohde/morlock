@@ -97,6 +97,24 @@ func PawnJumpRank(c Color) Bitboard {
 	}
 }
 
+// Attackboard returns all potential moves/attacks for an officer (= non-Pawn) at the given square.
+func Attackboard(bb RotatedBitboard, sq Square, piece Piece) Bitboard {
+	switch piece {
+	case King:
+		return KingAttackboard(sq)
+	case Queen:
+		return QueenAttackboard(bb, sq)
+	case Rook:
+		return RookAttackboard(bb, sq)
+	case Bishop:
+		return BishopAttackboard(bb, sq)
+	case Knight:
+		return KnightAttackboard(sq)
+	default:
+		panic("invalid piece")
+	}
+}
+
 // KingAttackboard returns all potential moves/attacks for a King at the given square.
 func KingAttackboard(sq Square) Bitboard {
 	return king[sq]
@@ -473,6 +491,11 @@ func init() {
 			bishopR[sq][state] = tmp
 		}
 	}
+}
+
+// QueenAttackboard returns all potential moves/attacks for a Queen at the given square. Convenience function.
+func QueenAttackboard(bb RotatedBitboard, sq Square) Bitboard {
+	return RookAttackboard(bb, sq) | BishopAttackboard(bb, sq)
 }
 
 func min(r Rank, f File) int {

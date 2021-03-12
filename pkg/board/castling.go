@@ -13,8 +13,10 @@ const (
 )
 
 const (
-	NoCastlingRights  = Castling(0)
-	FullCastingRights = WhiteKingSideCastle | WhiteQueenSideCastle | BlackKingSideCastle | BlackQueenSideCastle
+	NoCastlingRights    = Castling(0)
+	WhiteCastlingRights = WhiteKingSideCastle | WhiteQueenSideCastle
+	BlackCastlingRights = BlackKingSideCastle | BlackQueenSideCastle
+	FullCastingRights   = WhiteCastlingRights | BlackCastlingRights
 
 	ZeroCastling = NoCastlingRights
 	NumCastling  = FullCastingRights + 1
@@ -44,4 +46,12 @@ func (c Castling) String() string {
 		sb.WriteString("q")
 	}
 	return sb.String()
+}
+
+// CastlingRights returns the castling rights for the given color.
+func CastlingRights(c Color) Castling {
+	if c == White {
+		return WhiteCastlingRights
+	}
+	return BlackCastlingRights
 }

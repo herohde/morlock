@@ -15,3 +15,15 @@ const (
 func (s Score) String() string {
 	return fmt.Sprintf("%.2f", float64(s)/100)
 }
+
+// CropScore crops a Score into [MinScore;MaxScore].
+func CropScore(s Score) Score {
+	switch {
+	case s > MaxScore:
+		return MaxScore
+	case s < MinScore:
+		return MinScore
+	default:
+		return s
+	}
+}

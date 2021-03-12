@@ -20,16 +20,22 @@ type Searcher interface {
 
 // Iterative is a search harness for iterative deepening search.
 type Iterative struct {
-	search Searcher
+	search     Searcher
+	depthLimit int // 0 if not max
 }
 
-func NewIterative(search Searcher) Launcher {
+func NewIterative(search Searcher, depthLimit int) Launcher {
 	return &Iterative{
-		search: search,
+		search:     search,
+		depthLimit: depthLimit,
 	}
 }
 
 func (i *Iterative) Launch(ctx context.Context, b *board.Board, opt Options) (Handle, <-chan PV) {
+	if i.depthLimit > 0 && (opt.DepthLimit == 0 || opt.DepthLimit > i.depthLimit) {
+		opt.DepthLimit = i.depthLimit
+	}
+
 	out := make(chan PV, 1)
 	h := &handle{
 		init: make(chan struct{}),
