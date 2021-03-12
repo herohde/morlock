@@ -31,7 +31,7 @@ type Minimax struct {
 func (m Minimax) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error) {
 	run := &runMinimax{eval: m.Eval, b: b, quit: quit}
 	score, moves := run.search(ctx, depth)
-	if isClosed(quit) {
+	if IsClosed(quit) {
 		return 0, 0, nil, ErrHalted
 	}
 	return run.nodes, b.Turn().Unit() * score, moves, nil
@@ -49,7 +49,7 @@ type runMinimax struct {
 func (m *runMinimax) search(ctx context.Context, depth int) (board.Score, []board.Move) {
 	m.nodes++
 
-	if isClosed(m.quit) {
+	if IsClosed(m.quit) {
 		return 0, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
@@ -78,13 +78,10 @@ func (m *runMinimax) search(ctx context.Context, depth int) (board.Score, []boar
 	}
 
 	if !hasLegalMove {
-		if m.b.Position().IsChecked(m.b.Turn()) {
-			m.b.Adjudicate(board.Result{Outcome: board.Loss(m.b.Turn()), Reason: board.Checkmate})
-			score = board.MinScore
-		} else {
-			m.b.Adjudicate(board.Result{Outcome: board.Draw, Reason: board.Stalemate})
-			score = 0
+		if result := m.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
+			return board.MinScore, nil
 		}
+		return 0, nil
 	}
 
 	return score, pv

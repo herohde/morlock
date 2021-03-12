@@ -86,6 +86,16 @@ func ParseMove(str string) (Move, error) {
 	return Move{From: from, To: to}, nil
 }
 
+// IsCapture returns true iff the move is a Capture or CapturePromotion. Convenience function.
+func (m Move) IsCapture() bool {
+	return m.Type == CapturePromotion || m.Type == Capture
+}
+
+// IsCastle returns true iff the move is a KingSideCastle or QueenSideCastle. Convenience function.
+func (m Move) IsCastle() bool {
+	return m.Type == KingSideCastle || m.Type == QueenSideCastle
+}
+
 // EnPassantTarget return the e.p target square, if a Jump move. For e2-e4, it turns e3.
 func (m Move) EnPassantTarget() (Square, bool) {
 	if m.Type != Jump {

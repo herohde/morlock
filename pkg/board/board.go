@@ -173,6 +173,18 @@ func (b *Board) PopMove() (Move, bool) {
 	return m, true
 }
 
+// AdjudicateNoLegalMoves adjudicates the position assuming no legal moves exist.
+// The result is then either Mate or Stalemate.
+func (b *Board) AdjudicateNoLegalMoves() Result {
+	result := Result{Outcome: Draw, Reason: Stalemate}
+	if b.Position().IsChecked(b.Turn()) {
+		result = Result{Outcome: Loss(b.Turn()), Reason: Checkmate}
+	}
+	b.Adjudicate(result)
+	return result
+}
+
+// Adjudicate the position as given.
 func (b *Board) Adjudicate(result Result) {
 	b.result = result
 }
@@ -190,6 +202,29 @@ func (b *Board) identicalPositionCount(n *node, turn Color, limit int) int {
 		t = t.Opponent()
 	}
 	return ret
+}
+
+// LastMove returns the last move, if any.
+func (b *Board) LastMove() (Move, bool) {
+	if b.current.prev != nil {
+		return b.current.prev.next, true
+	}
+	return Move{}, false
+}
+
+// HasCasted returns true iff the color has castled.
+func (b *Board) HasCastled(c Color) bool {
+	t := b.turn.Opponent()
+	cur := b.current.prev
+
+	for cur != nil {
+		if t == c && cur.next.Type == QueenSideCastle || cur.next.Type == KingSideCastle {
+			return true
+		}
+		t = t.Opponent()
+		cur = cur.prev
+	}
+	return false
 }
 
 func (b *Board) String() string {

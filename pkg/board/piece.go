@@ -18,6 +18,12 @@ const (
 	NumPieces Piece = 7
 )
 
+var (
+	KingQueenRookKnightBishop = []Piece{King, Queen, Rook, Knight, Bishop}
+	QueenRookKnightBishop     = []Piece{Queen, Rook, Knight, Bishop}
+	QueenRookKnightBishopPawn = []Piece{Queen, Rook, Knight, Bishop, Pawn}
+)
+
 func ParsePiece(r rune) (Piece, bool) {
 	switch r {
 	case 'p', 'P':

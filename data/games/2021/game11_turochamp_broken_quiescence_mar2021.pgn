@@ -1,0 +1,20 @@
+[Event "?"]
+[Site "?"]
+[Date "2021.03.12"]
+[Round "?"]
+[White "Henning"]
+[Black "Morlock (dev)"]
+[Result "0-1"]
+[ECO "A40"]
+[GameDuration "00:01:59"]
+[GameEndTime "2021-03-12T10:41:02.468 PST"]
+[GameStartTime "2021-03-12T10:39:02.917 PST"]
+[Opening "Queen's pawn"]
+[PlyCount "11"]
+[Termination "adjudication"]
+[TimeControl "40/300"]
+
+1. d4 a5 {+37.43/1 4.2s} 2. e4 {18s} Ra7 {+32.68/1 2.9s} 3. Nc3 {10s}
+Ra8 {+32.91/1 1.0s} 4. Nf3 {2.9s} Ra7 {+32.99/1 4.9s} 5. Bb5 {21s}
+Nc6 {+33.14/1 2.1s} 6. Ba6 {1.9s, Black wins by adjudication: user decision} 0-1
+

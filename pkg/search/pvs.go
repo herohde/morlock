@@ -3,7 +3,6 @@ package search
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
-	"github.com/herohde/morlock/pkg/eval"
 )
 
 // PVS implements principal variation search. Pseudo-code:
@@ -25,20 +24,20 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Principal_variation_search.
 type PVS struct {
-	Eval eval.Evaluator
+	Eval Quiescence
 }
 
 func (p PVS) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error) {
 	run := &runPVS{eval: p.Eval, b: b, quit: quit}
 	score, moves := run.search(ctx, depth, board.MinScore-1, board.MaxScore+1)
-	if isClosed(quit) {
+	if IsClosed(quit) {
 		return 0, 0, nil, ErrHalted
 	}
 	return run.nodes, b.Turn().Unit() * score, moves, nil
 }
 
 type runPVS struct {
-	eval  eval.Evaluator
+	eval  Quiescence
 	b     *board.Board
 	nodes uint64
 
@@ -49,14 +48,19 @@ type runPVS struct {
 func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score) (board.Score, []board.Move) {
 	m.nodes++
 
-	if isClosed(m.quit) {
+	if IsClosed(m.quit) {
 		return 0, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
 		return 0, nil
 	}
 	if depth == 0 {
-		return m.b.Turn().Unit() * board.CropScore(m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn())), nil
+		if m.b.Turn() == board.Black {
+			alpha, beta = -beta, -alpha
+		}
+		nodes, score := m.eval.QuietSearch(ctx, m.b, alpha, beta, m.quit)
+		m.nodes += nodes
+		return m.b.Turn().Unit() * score, nil
 	}
 
 	hasLegalMove := false
@@ -95,13 +99,10 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 	}
 
 	if !hasLegalMove {
-		if m.b.Position().IsChecked(m.b.Turn()) {
-			m.b.Adjudicate(board.Result{Outcome: board.Loss(m.b.Turn()), Reason: board.Checkmate})
+		if result := m.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
 			return board.MinScore, nil
-		} else {
-			m.b.Adjudicate(board.Result{Outcome: board.Draw, Reason: board.Stalemate})
-			return 0, nil
 		}
+		return 0, nil
 	}
 
 	return alpha, pv

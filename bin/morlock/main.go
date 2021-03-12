@@ -23,7 +23,12 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		e := engine.New(ctx, search.NewIterative(search.PVS{Eval: turochamp.Eval{}}, 2))
+		s := search.PVS{
+			Eval: turochamp.Quiescence{
+				Eval: turochamp.Eval{},
+			},
+		}
+		e := engine.New(ctx, search.NewIterative(s, 2))
 
 		driver, out := uci.NewDriver(ctx, e, in)
 		go writeStdoutLines(ctx, out)

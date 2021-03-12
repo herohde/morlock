@@ -2,7 +2,6 @@ package search
 
 import (
 	"context"
-	"errors"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/seekerror/logw"
 	"go.uber.org/atomic"
@@ -10,21 +9,13 @@ import (
 	"time"
 )
 
-// ErrHalted is an error indicating that the search was halted.
-var ErrHalted = errors.New("search halted")
-
-// Searcher implements search of the game tree to a given depth. Thread-safe.
-type Searcher interface {
-	Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error)
-}
-
 // Iterative is a search harness for iterative deepening search.
 type Iterative struct {
-	search     Searcher
+	search     Search
 	depthLimit int // 0 if not max
 }
 
-func NewIterative(search Searcher, depthLimit int) Launcher {
+func NewIterative(search Search, depthLimit int) Launcher {
 	return &Iterative{
 		search:     search,
 		depthLimit: depthLimit,
@@ -54,7 +45,7 @@ type handle struct {
 	mu sync.Mutex
 }
 
-func (h *handle) process(ctx context.Context, search Searcher, b *board.Board, opt Options, out chan PV) {
+func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt Options, out chan PV) {
 	defer h.markInitialized()
 	defer close(out)
 
@@ -116,7 +107,8 @@ func (h *handle) markInitialized() {
 	}
 }
 
-func isClosed(ch <-chan struct{}) bool {
+// IsClosed return true iff the quit channel is closed.
+func IsClosed(ch <-chan struct{}) bool {
 	select {
 	case <-ch:
 		return true

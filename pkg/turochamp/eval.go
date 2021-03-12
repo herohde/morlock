@@ -40,12 +40,30 @@ func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Co
 }
 
 func material(pos *board.Position, turn board.Color) board.Score {
-	score := 100 * board.Score(pos.Piece(turn, board.Pawn).PopCount())
-	score += 300 * board.Score(pos.Piece(turn, board.Knight).PopCount())
-	score += 350 * board.Score(pos.Piece(turn, board.Bishop).PopCount())
-	score += 500 * board.Score(pos.Piece(turn, board.Rook).PopCount())
-	score += 1000 * board.Score(pos.Piece(turn, board.Queen).PopCount())
+	var score board.Score
+	for _, piece := range board.QueenRookKnightBishopPawn {
+		score += pieceValue(piece) * board.Score(pos.Piece(turn, piece).PopCount())
+	}
 	return score
+}
+
+func pieceValue(piece board.Piece) board.Score {
+	switch piece {
+	case board.King:
+		return 10000
+	case board.Queen:
+		return 1000
+	case board.Rook:
+		return 500
+	case board.Bishop:
+		return 350
+	case board.Knight:
+		return 300
+	case board.Pawn:
+		return 100
+	default:
+		panic("invalid piece")
+	}
 }
 
 func ratio(a, b board.Score) board.Score {
@@ -107,14 +125,12 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 			mayCheck = true
 			score += 10
 		}
-
-		isCastle := m.Type == board.KingSideCastle || m.Type == board.QueenSideCastle
-		if !mayCastle && isCastle {
+		if !mayCastle && m.IsCastle() {
 			mayCastle = true
 			score += 10
 		}
 
-		if m.Piece != board.Pawn && !isCastle {
+		if m.Piece != board.Pawn && !m.IsCastle() {
 			mobility[m.From]++
 			if m.Type == board.Capture {
 				mobility[m.From]++
@@ -133,7 +149,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		middle ^= board.BitMask(from)
 
 		defenders := 0
-		for _, p := range []board.Piece{board.King, board.Queen, board.Rook, board.Knight, board.Bishop} {
+		for _, p := range board.KingQueenRookKnightBishop {
 			if bb := board.Attackboard(pos.Rotated(), from, p) & pos.Piece(turn, p); bb != 0 {
 				defenders += bb.PopCount()
 			}
@@ -175,7 +191,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 
 		score += 2 * board.Score(ranks)
 
-		for _, p := range []board.Piece{board.King, board.Queen, board.Rook, board.Knight, board.Bishop} {
+		for _, p := range board.KingQueenRookKnightBishop {
 			if board.Attackboard(pos.Rotated(), from, p)&pos.Piece(turn, p) != 0 {
 				score += 3
 				break
