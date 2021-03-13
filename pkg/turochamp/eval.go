@@ -154,7 +154,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 				defenders += bb.PopCount()
 			}
 		}
-		if bb := board.PawnCaptureboard(turn, pos.Piece(turn, board.Pawn)); bb != 0 {
+		if bb := board.PawnCaptureboard(turn, pos.Piece(turn, board.Pawn)) & board.BitMask(from); bb != 0 {
 			defenders += bb.PopCount()
 		}
 		if defenders > 0 {
@@ -184,15 +184,15 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 
 		ranks := 0
 		if turn == board.White {
-			ranks += int(from.Rank() - 2)
+			ranks += int(from.Rank() - board.Rank2)
 		} else {
-			ranks += int(7 - from.Rank())
+			ranks += int(board.Rank7 - from.Rank())
 		}
 
 		score += 2 * board.Score(ranks)
 
 		for _, p := range board.KingQueenRookKnightBishop {
-			if board.Attackboard(pos.Rotated(), from, p)&pos.Piece(turn, p) != 0 {
+			if bb := board.Attackboard(pos.Rotated(), from, p) & pos.Piece(turn, p); bb != 0 {
 				score += 3
 				break
 			}

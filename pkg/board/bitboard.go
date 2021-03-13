@@ -111,7 +111,7 @@ func Attackboard(bb RotatedBitboard, sq Square, piece Piece) Bitboard {
 	case Knight:
 		return KnightAttackboard(sq)
 	default:
-		panic("invalid piece")
+		panic("invalid piece or Pawn")
 	}
 }
 

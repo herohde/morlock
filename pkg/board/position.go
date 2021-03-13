@@ -54,13 +54,13 @@ func (p *Position) Move(m Move) (*Position, bool) {
 
 	// (2) Remove any captured piece.
 
-	if m.Type == Capture || m.Type == CapturePromotion {
+	if m.IsCapture() {
 		ret.xor(m.To, turn.Opponent(), m.Capture)
 	}
 
 	// (3) Add piece to "to" square.
 
-	if m.Type == Promotion || m.Type == CapturePromotion {
+	if m.IsPromotion() {
 		piece = m.Promotion
 	}
 	ret.xor(m.To, turn, piece)
@@ -156,7 +156,7 @@ func (p *Position) IsEmpty(sq Square) bool {
 func (p *Position) IsAttacked(c Color, sq Square) bool {
 	opp := c.Opponent()
 
-	for _, piece := range []Piece{King, Queen, Rook, Bishop, Knight} {
+	for _, piece := range KingQueenRookKnightBishop {
 		if pieces := p.pieces[opp][piece]; pieces != 0 && Attackboard(p.rotated, sq, piece)&pieces != 0 {
 			return true
 		}
@@ -230,7 +230,7 @@ func (p *Position) PseudoLegalMoves(turn Color) []Move {
 
 	var ret []Move
 
-	for _, piece := range []Piece{Queen, Rook, Bishop, Knight} {
+	for _, piece := range QueenRookKnightBishop {
 		pieces := p.pieces[turn][piece]
 		for pieces != EmptyBitboard {
 			from := pieces.LastPopSquare()
@@ -316,7 +316,7 @@ func (p *Position) emitPromo(t MoveType, piece Piece, from Square, attackboard B
 
 		// Emit under-promotions as well.
 
-		for _, pc := range []Piece{Queen, Rook, Knight, Bishop} {
+		for _, pc := range QueenRookKnightBishop {
 			*out = append(*out, Move{Type: t, Piece: piece, From: from, To: to, Capture: capture, Promotion: pc})
 		}
 	}

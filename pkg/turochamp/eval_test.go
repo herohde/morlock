@@ -28,6 +28,14 @@ func TestMaterial(t *testing.T) {
 		{"kq6/8/8/8/8/8/8/PPPPPPQK w - - 0 1", 160},
 		{"kqqq4/8/8/8/8/8/8/1PPPQQQK w - - 0 1", 110},
 		{"rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 102},
+
+		{"k7/8/8/8/8/8/8/7K b - - 0 1", 0},
+		{"kq6/8/8/8/8/8/8/7K b - - 0 1", -1000},
+		{"kq6/8/8/8/8/8/8/6PK b - - 0 1", -1000},
+		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", 285},
+		{"kq6/8/8/8/8/8/8/5PQK b - - 0 1", 110},
+		{"kq6/8/8/8/8/8/8/4PPQK b - - 0 1", 120},
+		{"kq6/8/8/8/8/8/8/3PPPQK b - - 0 1", 130},
 	}
 
 	for _, tt := range tests {
@@ -44,9 +52,14 @@ func TestPositionPlay(t *testing.T) {
 		fen      string
 		expected board.Score // x10
 	}{
-		{fen.Initial, 4210},
+		{fen.Initial, 80},
+		{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", -80},
+		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", 23},
+		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", -23},
 		{"k7/8/8/8/8/8/8/7K w - - 0 1", -29},
+		{"k7/8/8/8/8/8/8/7K b - - 0 1", 29},
 		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", 24},
+		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", -6},
 	}
 
 	for _, tt := range tests {
@@ -63,9 +76,10 @@ func TestEval(t *testing.T) {
 		fen      string
 		expected board.Score // not really in centi-pawns
 	}{
-		{fen.Initial, 4210},
+		{fen.Initial, 80},
 		{"k7/8/8/8/8/8/8/7K w - - 0 1", -29},
 		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", 285 + 10000 + 24},
+		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", 285 + 10000 - 6},
 	}
 
 	for _, tt := range tests {

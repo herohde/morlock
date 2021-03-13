@@ -46,8 +46,6 @@ type runPVS struct {
 
 // search returns the positive score for the color.
 func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score) (board.Score, []board.Move) {
-	m.nodes++
-
 	if IsClosed(m.quit) {
 		return 0, nil
 	}
@@ -62,6 +60,8 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 		m.nodes += nodes
 		return m.b.Turn().Unit() * score, nil
 	}
+
+	m.nodes++
 
 	hasLegalMove := false
 	var pv []board.Move

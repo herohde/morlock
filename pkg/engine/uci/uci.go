@@ -196,8 +196,8 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				d.ensureInactive(ctx)
 
 				position := fen.Initial
-				if len(args) > 7 && args[0] == "fen" {
-					position = strings.Join(args[1:6], " ")
+				if len(args) >= 7 && args[0] == "fen" {
+					position = strings.Join(args[1:7], " ")
 				}
 
 				// TODO(herohde) 3/9/2021: check if just continuation of game.
@@ -292,9 +292,11 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 					d.searchCompleted(ctx, last)
 				}()
 
-				time.AfterFunc(1*time.Second, func() {
-					_, _ = d.e.Halt(ctx)
-				})
+				/*
+					time.AfterFunc(10*time.Second, func() {
+						_, _ = d.e.Halt(ctx)
+					})
+				*/
 
 			case "stop":
 				// * stop

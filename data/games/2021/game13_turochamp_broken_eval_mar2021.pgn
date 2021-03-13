@@ -1,0 +1,23 @@
+[Event "?"]
+[Site "?"]
+[Date "2021.03.12"]
+[Round "?"]
+[White "Morlock (dev)"]
+[Black "Henning"]
+[Result "1/2-1/2"]
+[ECO "A06"]
+[GameDuration "00:01:15"]
+[GameEndTime "2021-03-12T22:01:55.369 PST"]
+[GameStartTime "2021-03-12T22:00:39.609 PST"]
+[Opening "Reti Opening"]
+[PlyCount "26"]
+[TimeControl "40/300"]
+
+1. Nf3 {+42.28/2 0.002s} d5 {18s} 2. Nc3 {+42.48/2 0.011s} Nc6 {6.2s}
+3. Nb5 {+42.60/2 0.013s} e5 {2.5s} 4. Rg1 {+42.52/2 0.026s} a6 {6.6s}
+5. Nc3 {+42.48/2 0.045s} Nf6 {11s} 6. Rh1 {+42.50/2 0.015s} Bb4 {17s}
+7. Ng5 {+42.52/2 0.018s} O-O {5.5s} 8. Nf3 {+42.60/2 0.018s} Qe8 {3.3s}
+9. Ng5 {+42.62/2 0.016s} Qd8 {0.70s} 10. Nf3 {+42.60/2 0.027s} Qe8 {0.60s}
+11. Ng5 {+42.62/2 0.017s} Qe7 {0.80s} 12. Rg1 {+42.59/2 0.030s} Qd7 {2.5s}
+13. Rh1 {+42.62/2 0.031s} Qd8 {0.72s, Draw by 3-fold repetition} 1/2-1/2
+

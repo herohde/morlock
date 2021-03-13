@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-var version = build.NewVersion(0, 84, 0)
+var version = build.NewVersion(0, 85, 0)
 
 // Engine encapsulates game-playing logic, search and evaluation.
 type Engine struct {

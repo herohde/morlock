@@ -91,6 +91,11 @@ func (m Move) IsCapture() bool {
 	return m.Type == CapturePromotion || m.Type == Capture
 }
 
+// IsPromotion returns true iff the move is a Promotion or CapturePromotion. Convenience function.
+func (m Move) IsPromotion() bool {
+	return m.Type == CapturePromotion || m.Type == Promotion
+}
+
 // IsCastle returns true iff the move is a KingSideCastle or QueenSideCastle. Convenience function.
 func (m Move) IsCastle() bool {
 	return m.Type == KingSideCastle || m.Type == QueenSideCastle

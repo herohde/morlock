@@ -6,6 +6,13 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 12. mar 2021; Version 0.85 ###
+  - Completed TUROCHAMP.
+  - Bad blunder: "2b2rk1/r1Pp2p1/ppn1p3/q3N1Bp/3P4/2NQR2P/PPP2PP1/R5K1 b - - 4 18", because UCI quit after 1s. Fixed.
+
+    I0312 23:42:01.932727   32269 iterative.go:72] Searched --b--rk-/r-Pp--p-/ppn-p---/q---N-Bp/---P----/--NQR--P/PPP--PP-/R-----K- -(-): depth=1 score=102.95 nodes=190 time=17.949389ms pv=Qa5*e5
+    I0312 23:42:03.191043   32269 iterative.go:72] Searched --b--rk-/r-Pp--p-/ppn-p---/q---N-Bp/---P----/--NQR--P/PPP--PP-/R-----K- -(-): depth=2 score=99.61 nodes=34659 time=1.25824247s pv=Nc6-b4 Qd3-e4
+
 ### 10. mar 2021; Version 0.84 ###
   - Engine working with material, PVS and UCI integration.
   - Move generation passes perft.
@@ -13,7 +20,7 @@
 TODO:
   - Pure material plays aimlessly in the endgame. Add Mate in X to eval?
   - Add simple move ordering? MVV-LVA or just promo/captures first.
-  - Otherwise, focus on Turbochamp heuristics
+  - Otherwise, focus on Turochamp heuristics
 
 ### 20. feb 2021; Version 0.83 ###
   - Revived project! (yet again)
