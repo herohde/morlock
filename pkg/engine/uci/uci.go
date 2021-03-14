@@ -13,6 +13,7 @@ import (
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"go.uber.org/atomic"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -26,6 +27,8 @@ type Driver struct {
 
 	active atomic.Bool    // user is waiting for engine to move
 	ponder chan search.PV // chan for intermediate search information
+
+	lastPosition string // last position line (empty if no last position)
 
 	quit   chan struct{}
 	closed atomic.Bool
@@ -79,7 +82,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 	//		e.g. "id author Stefan MK\n"
 
 	d.out <- fmt.Sprintf("id name %v", d.e.Name())
-	d.out <- fmt.Sprintf("id author herohde")
+	d.out <- fmt.Sprintf("id author %v", d.e.Author())
 
 	// * uciok
 	//
@@ -183,6 +186,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				//   after "ucinewgame" to wait for the engine to finish its operation.
 
 				d.ensureInactive(ctx)
+				d.lastPosition = ""
 
 			case "position":
 				// * position [fen <fenstring> | startpos ]  moves <move1> .... <movei>
@@ -195,12 +199,36 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 
 				d.ensureInactive(ctx)
 
+				if d.lastPosition != "" && strings.HasPrefix(line, d.lastPosition) {
+					// Continuation of game.
+
+					moves := strings.TrimSpace(strings.TrimPrefix(line, d.lastPosition))
+					for _, arg := range strings.Split(moves, " ") {
+						if arg == "moves" {
+							continue
+						}
+
+						m, err := board.ParseMove(arg)
+						if err != nil {
+							logw.Errorf(ctx, "Invalid position move '%v': %v: %v", arg, line, err)
+							return
+						}
+						if err := d.e.Move(ctx, m); err != nil {
+							logw.Errorf(ctx, "Invalid position move '%v': %v: %v", arg, line, err)
+							return
+						}
+					}
+
+					d.lastPosition = line
+					break
+				}
+
+				// New position.
+
 				position := fen.Initial
 				if len(args) >= 7 && args[0] == "fen" {
 					position = strings.Join(args[1:7], " ")
 				}
-
-				// TODO(herohde) 3/9/2021: check if just continuation of game.
 
 				if err := d.e.Reset(ctx, position); err != nil {
 					logw.Errorf(ctx, "Invalid position: %v", line)
@@ -227,6 +255,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 						return
 					}
 				}
+				d.lastPosition = line
 
 			case "go":
 				// * go
@@ -274,8 +303,38 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				d.ensureInactive(ctx)
 
 				var opt search.Options
+				infinite := false
+				timeout := time.Duration(0)
 
-				// TODO(herohde) 3/8/2021: parse options.
+				for i := 0; i < len(args); i++ {
+					switch args[i] {
+					case "depth":
+						n, err := strconv.Atoi(args[i+1])
+						if err != nil {
+							logw.Errorf(ctx, "Invalid depth: %v: %v", line, err)
+							return
+						}
+
+						opt.DepthLimit = n
+						i++
+
+					case "movetime":
+						ms, err := strconv.Atoi(args[i+1])
+						if err != nil {
+							logw.Errorf(ctx, "Invalid movetime: %v: %v", line, err)
+							return
+						}
+
+						timeout = time.Millisecond * time.Duration(ms)
+						i++
+
+					case "infinite":
+						infinite = true
+
+					default:
+						// silently ignore anything not handled.
+					}
+				}
 
 				out, err := d.e.Analyze(ctx, opt)
 				if err != nil {
@@ -283,20 +342,27 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 					return
 				}
 				d.active.Store(true)
+
+				// Forward ponder info. Complete search if it ends, unless infinite.
+
 				go func() {
 					var last search.PV
 					for pv := range out {
 						last = pv
 						d.ponder <- pv
 					}
-					d.searchCompleted(ctx, last)
+					if !infinite {
+						d.searchCompleted(ctx, last)
+					}
 				}()
 
-				/*
-					time.AfterFunc(10*time.Second, func() {
+				// Enforce move time limit, if set.
+
+				if timeout > 0 {
+					time.AfterFunc(timeout, func() {
 						_, _ = d.e.Halt(ctx)
 					})
-				*/
+				}
 
 			case "stop":
 				// * stop

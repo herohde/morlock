@@ -15,16 +15,19 @@ var version = build.NewVersion(0, 85, 0)
 
 // Engine encapsulates game-playing logic, search and evaluation.
 type Engine struct {
-	zt       *board.ZobristTable
-	launcher search.Launcher
+	name, author string
+	zt           *board.ZobristTable
+	launcher     search.Launcher
 
 	b      *board.Board
 	active search.Handle
 	mu     sync.Mutex
 }
 
-func New(ctx context.Context, launcher search.Launcher) *Engine {
+func New(ctx context.Context, name, author string, launcher search.Launcher) *Engine {
 	e := &Engine{
+		name:     name,
+		author:   author,
 		zt:       board.NewZobristTable(0),
 		launcher: launcher,
 	}
@@ -36,7 +39,12 @@ func New(ctx context.Context, launcher search.Launcher) *Engine {
 
 // Name returns the engine name and version.
 func (e *Engine) Name() string {
-	return fmt.Sprintf("morlock %v", version)
+	return fmt.Sprintf("%v %v", e.name, version)
+}
+
+// Author returns the author.
+func (e *Engine) Author() string {
+	return e.author
 }
 
 // Reset resets the engine to a new starting position.

@@ -5,6 +5,7 @@
 *.so
 *.dylib
 main
+turochamp
 .DS_Store
 
 # Test binary, built with `go test -c`
