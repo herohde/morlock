@@ -25,10 +25,9 @@ type Driver struct {
 	e   *engine.Engine
 	out chan<- string
 
-	active atomic.Bool    // user is waiting for engine to move
-	ponder chan search.PV // chan for intermediate search information
-
-	lastPosition string // last position line (empty if no last position)
+	active       atomic.Bool    // user is waiting for engine to move
+	ponder       chan search.PV // chan for intermediate search information
+	lastPosition string         // last position line (empty if no last position)
 
 	quit   chan struct{}
 	closed atomic.Bool
@@ -307,26 +306,43 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				timeout := time.Duration(0)
 
 				for i := 0; i < len(args); i++ {
-					switch args[i] {
-					case "depth":
-						n, err := strconv.Atoi(args[i+1])
+					cmd := args[i]
+					switch cmd {
+					case "wtime", "btime", "movestogo", "depth", "movetime":
+						// Next argument is an int.
+
+						i++
+						if i == len(args) {
+							logw.Errorf(ctx, "No argument for %v: %v", cmd, line)
+							return
+						}
+						n, err := strconv.Atoi(args[i])
 						if err != nil {
-							logw.Errorf(ctx, "Invalid depth: %v: %v", line, err)
+							logw.Errorf(ctx, "Invalid argument for %v: %v", line, err)
 							return
 						}
 
-						opt.DepthLimit = n
-						i++
-
-					case "movetime":
-						ms, err := strconv.Atoi(args[i+1])
-						if err != nil {
-							logw.Errorf(ctx, "Invalid movetime: %v: %v", line, err)
-							return
+						switch cmd {
+						case "depth":
+							opt.DepthLimit = &n
+						case "wtime":
+							if opt.TimeControl == nil {
+								opt.TimeControl = &search.TimeControl{}
+							}
+							opt.TimeControl.White = time.Millisecond * time.Duration(n)
+						case "btime":
+							if opt.TimeControl == nil {
+								opt.TimeControl = &search.TimeControl{}
+							}
+							opt.TimeControl.Black = time.Millisecond * time.Duration(n)
+						case "movestogo":
+							if opt.TimeControl == nil {
+								opt.TimeControl = &search.TimeControl{}
+							}
+							opt.TimeControl.Moves = n
+						case "movetime":
+							timeout = time.Millisecond * time.Duration(n)
 						}
-
-						timeout = time.Millisecond * time.Duration(ms)
-						i++
 
 					case "infinite":
 						infinite = true

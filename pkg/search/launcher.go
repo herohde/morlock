@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"strings"
 	"time"
 )
 
@@ -29,7 +30,21 @@ func (p PV) String() string {
 
 // Options hold dynamic search options. The user may change these on a particular search.
 type Options struct {
-	DepthLimit int // 0 == no limit
+	// DepthLimit, if set, limits the search to the given depth.
+	DepthLimit *int
+	// TimeControl, if set, limits the search to the given time parameters.
+	TimeControl *TimeControl
+}
+
+func (o Options) String() string {
+	var ret []string
+	if o.DepthLimit == nil {
+		ret = append(ret, fmt.Sprintf("depth=%v", *o.DepthLimit))
+	}
+	if o.TimeControl == nil {
+		ret = append(ret, fmt.Sprintf("time=%v", *o.TimeControl))
+	}
+	return fmt.Sprintf("opt[%v]", strings.Join(ret, ", "))
 }
 
 // Launcher is a Search generator.

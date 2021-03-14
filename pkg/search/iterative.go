@@ -23,8 +23,8 @@ func NewIterative(search Search, depthLimit int) Launcher {
 }
 
 func (i *Iterative) Launch(ctx context.Context, b *board.Board, opt Options) (Handle, <-chan PV) {
-	if i.depthLimit > 0 && (opt.DepthLimit == 0 || opt.DepthLimit > i.depthLimit) {
-		opt.DepthLimit = i.depthLimit
+	if i.depthLimit > 0 && opt.DepthLimit == nil {
+		opt.DepthLimit = &i.depthLimit
 	}
 
 	out := make(chan PV, 1)
@@ -48,6 +48,17 @@ type handle struct {
 func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt Options, out chan PV) {
 	defer h.markInitialized()
 	defer close(out)
+
+	var soft, hard time.Duration
+	if opt.TimeControl != nil {
+		soft, hard = opt.TimeControl.Limits(b.Turn())
+
+		time.AfterFunc(hard, func() {
+			h.Halt()
+		})
+
+		logw.Debugf(ctx, "Search time limits: [%v; %v]", soft, hard)
+	}
 
 	depth := 1
 	for !h.done.Load() {
@@ -82,8 +93,11 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 		out <- pv
 
 		h.markInitialized()
-		if depth == opt.DepthLimit {
-			return
+		if opt.DepthLimit != nil && depth == *opt.DepthLimit {
+			return // halt: reached max depth
+		}
+		if soft > 0 && soft < time.Since(start) {
+			return // halt: exceeded soft time limit. Do not start new search.
 		}
 		depth++
 	}
