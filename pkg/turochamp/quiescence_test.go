@@ -41,8 +41,7 @@ func TestQuiescence(t *testing.T) {
 		}
 
 		nodes, actual := qs.QuietSearch(context.Background(), b, board.MinScore-1, board.MaxScore+1, make(chan struct{}))
-		assert.Equal(t, nodes, tt.nodes)
-		assert.Equal(t, actual, tt.expected)
+		assert.Equal(t, nodes, tt.nodes, "failed: %v", tt.fen)
+		assert.Equal(t, actual, tt.expected, "failed: %v", tt.fen)
 	}
-
 }

@@ -98,7 +98,7 @@ func (e *Engine) Analyze(ctx context.Context, opt search.Options) (<-chan search
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logw.Infof(ctx, "Analyze %v, depth=%v", e.b, opt.DepthLimit)
+	logw.Infof(ctx, "Analyze %v, opt=%v", e.b, opt)
 
 	if e.active != nil {
 		return nil, fmt.Errorf("search already active")

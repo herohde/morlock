@@ -1,19 +1,13 @@
-package turochamp
+package search
 
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
-	"github.com/herohde/morlock/pkg/search"
 	"sort"
 )
 
-// Quiescence implements the selective "considerable moves" search:
-//   (1) Re-captures are considerable.
-//   (2) Capture of en prise pieces are considerable.
-//   (3) Capture of higher value pieces are considerable.
-//   (4) Checkmate are considerable.
-// Additionally, it adds the "has already castled" bonus to the evaluator.
+// Quiescence implements a configurable alpha-beta QuietSearch.
 type Quiescence struct {
 	Eval eval.Evaluator
 }
@@ -34,7 +28,7 @@ type runQuiescence struct {
 
 // search returns the positive score for the color.
 func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) board.Score {
-	if search.IsClosed(r.quit) {
+	if IsClosed(r.quit) {
 		return 0
 	}
 	if r.b.Result().Outcome == board.Draw {
@@ -45,18 +39,10 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := turn.Unit() * evaluate(ctx, r.b, r.eval)
+	score := turn.Unit() * r.eval.Evaluate(ctx, r.b.Position(), turn)
 	alpha = board.Max(alpha, score)
 
-	mayRecapture := false
-	var target board.Square
-	if m, ok := r.b.LastMove(); ok && m.IsCapture() {
-		mayRecapture = true
-		target = m.To
-	}
-
-	// lastmove, _ := r.b.LastMove();
-	// logw.Debugf(ctx, "SCORE: %v (last: %v, recapture=%v)= %v", r.b.Position(), lastmove, mayRecapture, score)
+	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
 
 	moves := r.b.Position().PseudoLegalMoves(turn)
 	sort.Sort(board.ByScore(moves))
@@ -66,23 +52,17 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 			continue
 		}
 
-		considerable := false
-		if r.b.Position().IsCheckMate(turn.Opponent()) {
-			considerable = true
-		}
+		explore := m.IsPromotion()
 		if m.IsCapture() {
-			if mayRecapture && m.To == target {
-				considerable = true
-			}
-			if pieceValue(m.Piece) < pieceValue(m.Capture) {
-				considerable = true
+			if m.Piece.NominalValue() < m.Capture.NominalValue() {
+				explore = true
 			}
 			if !r.b.Position().IsAttacked(turn, m.To) {
-				considerable = true
+				explore = true
 			}
 		}
 
-		if considerable {
+		if explore {
 			score := r.search(ctx, -beta, -alpha)
 			alpha = board.Max(alpha, -score)
 		}
@@ -102,12 +82,4 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 		return 0
 	}
 	return alpha
-}
-
-func evaluate(ctx context.Context, b *board.Board, evaluator eval.Evaluator) board.Score {
-	score := evaluator.Evaluate(ctx, b.Position(), b.Turn())
-	if b.HasCastled(b.Turn()) {
-		score += b.Turn().Unit() * 10
-	}
-	return score
 }

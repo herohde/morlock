@@ -27,3 +27,11 @@ func CropScore(s Score) Score {
 		return s
 	}
 }
+
+// Max returns the largest of the given scores.
+func Max(a, b Score) Score {
+	if a < b {
+		return b
+	}
+	return a
+}

@@ -1,8 +1,10 @@
 package search
 
 import (
+	"context"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/seekerror/logw"
 	"time"
 )
 
@@ -38,4 +40,19 @@ func (t TimeControl) String() string {
 		return fmt.Sprintf("%.1f<>%.1f", t.White.Seconds(), t.Black.Seconds())
 	}
 	return fmt.Sprintf("%.1f<>%.1f[moves=%v]", t.White.Seconds(), t.Black.Seconds(), t.Moves)
+}
+
+// EnforceTimeControl enforces the time control limits, if any. Returns soft limit.
+func EnforceTimeControl(ctx context.Context, h Handle, tc *TimeControl, turn board.Color) (time.Duration, bool) {
+	if tc == nil {
+		return 0, false
+	}
+
+	soft, hard := tc.Limits(turn)
+	time.AfterFunc(hard, func() {
+		h.Halt()
+	})
+
+	logw.Debugf(ctx, "Time control limits for %v: [%v; %v]", tc, soft, hard)
+	return soft, true
 }

@@ -164,6 +164,22 @@ func (m Move) CastlingRightsLost() Castling {
 	}
 }
 
+// NominalValue returns the nominal material gain from the move.
+func (m Move) NominalValue() Score {
+	switch m.Type {
+	case CapturePromotion:
+		return m.Capture.NominalValue() + m.Promotion.NominalValue() - Pawn.NominalValue()
+	case Promotion:
+		return m.Promotion.NominalValue() - Pawn.NominalValue()
+	case Capture:
+		return m.Capture.NominalValue()
+	case EnPassant:
+		return Pawn.NominalValue()
+	default:
+		return 0
+	}
+}
+
 func (m Move) Equals(o Move) bool {
 	return m.From == o.From && m.To == o.To && m.Promotion == o.Promotion
 }
@@ -187,6 +203,13 @@ func (m Move) String() string {
 	}
 }
 
+// PrintMoves prints a list of moves.
+func PrintMoves(list []Move) string {
+	return FormatMoves(list, func(m Move) string {
+		return m.String()
+	})
+}
+
 // FormatMoves formats a list of moves.
 func FormatMoves(list []Move, fn func(Move) string) string {
 	var ret []string
@@ -201,4 +224,26 @@ func ignorePawn(piece Piece) string {
 		return ""
 	}
 	return piece.String()
+}
+
+// ByScore is a descending (Score, nominal MVV-LVA) sort order for moves.
+type ByScore []Move
+
+func (b ByScore) Len() int {
+	return len(b)
+}
+
+func (b ByScore) Less(i, j int) bool {
+	if b[i].Score == b[j].Score {
+		fst, snd := b[i].NominalValue(), b[j].NominalValue()
+		if fst == snd {
+			return b[i].Piece.NominalValue() < b[j].Piece.NominalValue()
+		}
+		return fst > snd
+	}
+	return b[i].Score > b[j].Score
+}
+
+func (b ByScore) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
 }

@@ -327,7 +327,11 @@ func filterMoves(ms []board.Move, fn func(move board.Move) bool) []board.Move {
 func printMoves(ms []board.Move) string {
 	var list []string
 	for _, m := range ms {
-		list = append(list, m.String())
+		str := m.String()
+		if m.Capture != board.NoPiece {
+			str += ":" + m.Capture.String()
+		}
+		list = append(list, str)
 	}
 	return strings.Join(list, "\n")
 }

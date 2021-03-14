@@ -11,12 +11,13 @@ type Search interface {
 	Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error)
 }
 
-// Quiescence is a limited quiescence search in a given [alpha;beta] window. Thread-safe.
-type Quiescence interface {
+// QuietSearch is a limited quiescence search in a given [alpha;beta] window,
+// where standing pat is an option for evaluation purposes. Thread-safe.
+type QuietSearch interface {
 	QuietSearch(ctx context.Context, b *board.Board, alpha, beta board.Score, quit <-chan struct{}) (uint64, board.Score)
 }
 
-// ZeroPly is an evaluator wrapped as a Quiescence search.
+// ZeroPly is an evaluator wrapped as a QuietSearch.
 type ZeroPly struct {
 	Eval eval.Evaluator
 }

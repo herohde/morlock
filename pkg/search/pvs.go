@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
+	"sort"
 )
 
 // PVS implements principal variation search. Pseudo-code:
@@ -24,7 +25,7 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Principal_variation_search.
 type PVS struct {
-	Eval Quiescence
+	Eval QuietSearch
 }
 
 func (p PVS) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error) {
@@ -37,7 +38,7 @@ func (p PVS) Search(ctx context.Context, b *board.Board, depth int, quit <-chan 
 }
 
 type runPVS struct {
-	eval  Quiescence
+	eval  QuietSearch
 	b     *board.Board
 	nodes uint64
 
@@ -67,6 +68,8 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 	var pv []board.Move
 
 	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
+	sort.Sort(board.ByScore(moves))
+
 	for _, move := range moves {
 		if m.b.PushMove(move) {
 			var score board.Score

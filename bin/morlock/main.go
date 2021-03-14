@@ -33,7 +33,7 @@ func main() {
 		// Use UCI protocol.
 
 		s := search.PVS{
-			Eval: search.ZeroPly{
+			Eval: search.Quiescence{
 				Eval: eval.Material{},
 			},
 		}

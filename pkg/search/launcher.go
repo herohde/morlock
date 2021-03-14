@@ -22,9 +22,7 @@ type PV struct {
 }
 
 func (p PV) String() string {
-	pv := board.FormatMoves(p.Moves, func(m board.Move) string {
-		return m.String()
-	})
+	pv := board.PrintMoves(p.Moves)
 	return fmt.Sprintf("depth=%v score=%v nodes=%v time=%v pv=%v", len(p.Moves), p.Score, p.Nodes, p.Time, pv)
 }
 
@@ -38,13 +36,13 @@ type Options struct {
 
 func (o Options) String() string {
 	var ret []string
-	if o.DepthLimit == nil {
+	if o.DepthLimit != nil {
 		ret = append(ret, fmt.Sprintf("depth=%v", *o.DepthLimit))
 	}
-	if o.TimeControl == nil {
+	if o.TimeControl != nil {
 		ret = append(ret, fmt.Sprintf("time=%v", *o.TimeControl))
 	}
-	return fmt.Sprintf("opt[%v]", strings.Join(ret, ", "))
+	return fmt.Sprintf("[%v]", strings.Join(ret, ", "))
 }
 
 // Launcher is a Search generator.

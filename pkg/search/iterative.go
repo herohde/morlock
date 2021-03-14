@@ -49,16 +49,7 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 	defer h.markInitialized()
 	defer close(out)
 
-	var soft, hard time.Duration
-	if opt.TimeControl != nil {
-		soft, hard = opt.TimeControl.Limits(b.Turn())
-
-		time.AfterFunc(hard, func() {
-			h.Halt()
-		})
-
-		logw.Debugf(ctx, "Search time limits: [%v; %v]", soft, hard)
-	}
+	soft, useSoft := EnforceTimeControl(ctx, h, opt.TimeControl, b.Turn())
 
 	depth := 1
 	for !h.done.Load() {
@@ -96,7 +87,7 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 		if opt.DepthLimit != nil && depth == *opt.DepthLimit {
 			return // halt: reached max depth
 		}
-		if soft > 0 && soft < time.Since(start) {
+		if useSoft && soft < time.Since(start) {
 			return // halt: exceeded soft time limit. Do not start new search.
 		}
 		depth++
