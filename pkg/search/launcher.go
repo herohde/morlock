@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/eval"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ var ErrHalted = errors.New("search halted")
 // PV represents the principal variation for some search depth.
 type PV struct {
 	Moves []board.Move
-	Score board.Score
+	Score eval.Score
 	Nodes uint64
 	Time  time.Duration
 }

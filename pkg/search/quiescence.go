@@ -12,10 +12,10 @@ type Quiescence struct {
 	Eval eval.Evaluator
 }
 
-func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta board.Score, quit <-chan struct{}) (uint64, board.Score) {
+func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
 	run := &runQuiescence{eval: q.Eval, b: b, quit: quit}
 	score := run.search(ctx, alpha, beta)
-	return run.nodes, b.Turn().Unit() * score
+	return run.nodes, eval.Unit(b.Turn()) * score
 }
 
 type runQuiescence struct {
@@ -27,7 +27,7 @@ type runQuiescence struct {
 }
 
 // search returns the positive score for the color.
-func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) board.Score {
+func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval.Score {
 	if IsClosed(r.quit) {
 		return 0
 	}
@@ -39,13 +39,13 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := turn.Unit() * r.eval.Evaluate(ctx, r.b.Position(), turn)
-	alpha = board.Max(alpha, score)
+	score := eval.Unit(turn) * r.eval.Evaluate(ctx, r.b.Position(), turn)
+	alpha = eval.Max(alpha, score)
 
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
 
 	moves := r.b.Position().PseudoLegalMoves(turn)
-	sort.Sort(board.ByScore(moves))
+	sort.Sort(board.ByMVVLVA(moves))
 
 	for _, m := range moves {
 		if !r.b.PushMove(m) {
@@ -54,7 +54,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 		explore := m.IsPromotion()
 		if m.IsCapture() {
-			if m.Piece.NominalValue() < m.Capture.NominalValue() {
+			if eval.NominalValue(m.Piece) < eval.NominalValue(m.Capture) {
 				explore = true
 			}
 			if !r.b.Position().IsAttacked(turn, m.To) {
@@ -64,7 +64,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 		if explore {
 			score := r.search(ctx, -beta, -alpha)
-			alpha = board.Max(alpha, -score)
+			alpha = eval.Max(alpha, -score)
 		}
 
 		r.b.PopMove()
@@ -77,7 +77,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 	if !hasLegalMoves {
 		if result := r.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return board.MinScore
+			return eval.MinScore
 		}
 		return 0
 	}

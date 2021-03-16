@@ -54,7 +54,6 @@ type Move struct {
 	Piece     Piece // moved piece
 	Promotion Piece // desired piece for promotion, if any.
 	Capture   Piece // captured piece, if any. Not set if EnPassant.
-	Score     Score
 }
 
 // ParseMove parses a move in pure algebraic coordinate notation, such as "a2a4" or "a7a8q".
@@ -164,22 +163,6 @@ func (m Move) CastlingRightsLost() Castling {
 	}
 }
 
-// NominalValue returns the nominal material gain from the move.
-func (m Move) NominalValue() Score {
-	switch m.Type {
-	case CapturePromotion:
-		return m.Capture.NominalValue() + m.Promotion.NominalValue() - Pawn.NominalValue()
-	case Promotion:
-		return m.Promotion.NominalValue() - Pawn.NominalValue()
-	case Capture:
-		return m.Capture.NominalValue()
-	case EnPassant:
-		return Pawn.NominalValue()
-	default:
-		return 0
-	}
-}
-
 func (m Move) Equals(o Move) bool {
 	return m.From == o.From && m.To == o.To && m.Promotion == o.Promotion
 }
@@ -226,24 +209,56 @@ func ignorePawn(piece Piece) string {
 	return piece.String()
 }
 
-// ByScore is a descending (Score, nominal MVV-LVA) sort order for moves.
-type ByScore []Move
+// ByMVVLVA is a descending Most-Valuable-Victim-Least-Valuable-Attacker sort order for moves.
+type ByMVVLVA []Move
 
-func (b ByScore) Len() int {
+func (b ByMVVLVA) Len() int {
 	return len(b)
 }
 
-func (b ByScore) Less(i, j int) bool {
-	if b[i].Score == b[j].Score {
-		fst, snd := b[i].NominalValue(), b[j].NominalValue()
-		if fst == snd {
-			return b[i].Piece.NominalValue() < b[j].Piece.NominalValue()
-		}
-		return fst > snd
+func (b ByMVVLVA) Less(i, j int) bool {
+	fst, snd := moveValue(b[i]), moveValue(b[j])
+	if fst == snd {
+		return pieceValue(b[i].Piece) < pieceValue(b[j].Piece)
 	}
-	return b[i].Score > b[j].Score
+	return fst > snd
 }
 
-func (b ByScore) Swap(i, j int) {
+func (b ByMVVLVA) Swap(i, j int) {
 	b[i], b[j] = b[j], b[i]
+}
+
+// moveValue returns the nominal material gain from the move.
+func moveValue(m Move) int {
+	switch m.Type {
+	case CapturePromotion:
+		return pieceValue(m.Capture) + pieceValue(m.Promotion) - pieceValue(Pawn)
+	case Promotion:
+		return pieceValue(m.Promotion) - pieceValue(Pawn)
+	case Capture:
+		return pieceValue(m.Capture)
+	case EnPassant:
+		return pieceValue(Pawn)
+	default:
+		return 0
+	}
+}
+
+// pieceValue returns the absolute nominal value in pawns for move ordering.
+// The King has an arbitrary value of 100 pawns.
+func pieceValue(p Piece) int {
+	switch p {
+	case Pawn:
+		return 1
+	case Bishop, Knight:
+		return 3
+	case Rook:
+		return 5
+	case Queen:
+		return 9
+	case King:
+		return 100
+	default:
+		return 0
+	}
 }

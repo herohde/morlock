@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/eval"
 	"sort"
 )
 
@@ -28,13 +29,13 @@ type PVS struct {
 	Eval QuietSearch
 }
 
-func (p PVS) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error) {
+func (p PVS) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
 	run := &runPVS{eval: p.Eval, b: b, quit: quit}
-	score, moves := run.search(ctx, depth, board.MinScore-1, board.MaxScore+1)
+	score, moves := run.search(ctx, depth, eval.NegInf, eval.Inf)
 	if IsClosed(quit) {
 		return 0, 0, nil, ErrHalted
 	}
-	return run.nodes, b.Turn().Unit() * score, moves, nil
+	return run.nodes, eval.Unit(b.Turn()) * score, moves, nil
 }
 
 type runPVS struct {
@@ -46,7 +47,7 @@ type runPVS struct {
 }
 
 // search returns the positive score for the color.
-func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score) (board.Score, []board.Move) {
+func (m *runPVS) search(ctx context.Context, depth int, alpha, beta eval.Score) (eval.Score, []board.Move) {
 	if IsClosed(m.quit) {
 		return 0, nil
 	}
@@ -59,7 +60,7 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 		}
 		nodes, score := m.eval.QuietSearch(ctx, m.b, alpha, beta, m.quit)
 		m.nodes += nodes
-		return m.b.Turn().Unit() * score, nil
+		return eval.Unit(m.b.Turn()) * score, nil
 	}
 
 	m.nodes++
@@ -68,11 +69,11 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 	var pv []board.Move
 
 	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
-	sort.Sort(board.ByScore(moves))
+	sort.Sort(board.ByMVVLVA(moves))
 
 	for _, move := range moves {
 		if m.b.PushMove(move) {
-			var score board.Score
+			var score eval.Score
 			var rem []board.Move
 
 			if !hasLegalMove {
@@ -103,7 +104,7 @@ func (m *runPVS) search(ctx context.Context, depth int, alpha, beta board.Score)
 
 	if !hasLegalMove {
 		if result := m.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return board.MinScore, nil
+			return eval.MinScore, nil
 		}
 		return 0, nil
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/turochamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,16 +16,15 @@ func TestQuiescence(t *testing.T) {
 		fen      string
 		moves    []string
 		nodes    uint64
-		expected board.Score // not really in centi-pawns
+		expected eval.Score // not really in centi-pawns
 	}{
-		{fen.Initial, nil, 1, 80},
-		{fen.Initial, []string{"d2d4"}, 1, -80},                   // no captures, so equal to startpos w/ black
-		{"kr6/pppppppp/8/8/8/8/6Q1/7K w - - 0 1", nil, 2, -10098}, // 1 undefended, 1 defended
-		{"k7/pppppp1p/6b1/7P/8/8/8/7K w - - 0 1", nil, 4, -10728}, // lower value, 2x recapture
-		{"k7/pppppnpn/8/n6Q/8/8/8/7K w - - 0 1", nil, 4, -10130},  // 3x undefended Knight
-		{"k7/p2ppnpn/8/r6Q/8/8/8/7K w - - 0 1", nil, 4, -18},      //  3x undefended, picks Rook for equal material
-
-		{"2b2rk1/r1Pp2p1/ppn1p3/q3N1Bp/3P4/2NQR2P/PPP2PP1/R5K1 b - - 4 18", nil, 2, 9945},
+		{fen.Initial, nil, 1, 0.8},
+		{fen.Initial, []string{"d2d4"}, 1, -0.8},                     // no captures, so equal to startpos w/ black
+		{"kr6/pppppppp/8/8/8/8/6Q1/7K w - - 0 1", nil, 2, -1200.23},  // 1 undefended, 1 defended
+		{"k7/pppppp1p/6b1/7P/8/8/8/7K w - - 0 1", nil, 3, -10500.19}, // lower value, 1x recapture, 1xcutoff
+		{"k7/pppppnpn/8/n6Q/8/8/8/7K w - - 0 1", nil, 4, -1200.20},   // 3x undefended Knight
+		{"k7/p2ppnpn/8/r6Q/8/8/8/7K w - - 0 1", nil, 4, -0.18},       //  3x undefended, picks Rook for equal material
+		{"2b2rk1/r1Pp2p1/ppn1p3/q3N1Bp/3P4/2NQR2P/PPP2PP1/R5K1 b - - 4 18", nil, 2, 1122.23},
 	}
 
 	qs := turochamp.Quiescence{Eval: turochamp.Eval{}}
@@ -40,7 +40,7 @@ func TestQuiescence(t *testing.T) {
 			b.PushMove(move)
 		}
 
-		nodes, actual := qs.QuietSearch(context.Background(), b, board.MinScore-1, board.MaxScore+1, make(chan struct{}))
+		nodes, actual := qs.QuietSearch(context.Background(), b, eval.MinScore-1, eval.MaxScore+1, make(chan struct{}))
 		assert.Equal(t, nodes, tt.nodes, "failed: %v", tt.fen)
 		assert.Equal(t, actual, tt.expected, "failed: %v", tt.fen)
 	}

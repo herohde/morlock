@@ -28,13 +28,13 @@ type Minimax struct {
 	Eval eval.Evaluator
 }
 
-func (m Minimax) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, board.Score, []board.Move, error) {
+func (m Minimax) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
 	run := &runMinimax{eval: m.Eval, b: b, quit: quit}
 	score, moves := run.search(ctx, depth)
 	if IsClosed(quit) {
 		return 0, 0, nil, ErrHalted
 	}
-	return run.nodes, b.Turn().Unit() * score, moves, nil
+	return run.nodes, eval.Unit(b.Turn()) * score, moves, nil
 }
 
 type runMinimax struct {
@@ -46,7 +46,7 @@ type runMinimax struct {
 }
 
 // search returns the positive score for the color.
-func (m *runMinimax) search(ctx context.Context, depth int) (board.Score, []board.Move) {
+func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board.Move) {
 	m.nodes++
 
 	if IsClosed(m.quit) {
@@ -56,11 +56,11 @@ func (m *runMinimax) search(ctx context.Context, depth int) (board.Score, []boar
 		return 0, nil
 	}
 	if depth == 0 {
-		return m.b.Turn().Unit() * board.CropScore(m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn())), nil
+		return eval.Unit(m.b.Turn()) * m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn()), nil
 	}
 
 	hasLegalMove := false
-	score := board.MinScore - 1
+	score := eval.NegInf
 	var pv []board.Move
 
 	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
@@ -79,7 +79,7 @@ func (m *runMinimax) search(ctx context.Context, depth int) (board.Score, []boar
 
 	if !hasLegalMove {
 		if result := m.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return board.MinScore, nil
+			return eval.MinScore, nil
 		}
 		return 0, nil
 	}

@@ -38,7 +38,7 @@ func TestMoveByScore(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		sort.Sort(board.ByScore(tt.in))
+		sort.Sort(board.ByMVVLVA(tt.in))
 		assert.Equal(t, printMoves(tt.in), printMoves(tt.out))
 	}
 }

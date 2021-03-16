@@ -18,10 +18,10 @@ type Quiescence struct {
 	Eval eval.Evaluator
 }
 
-func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta board.Score, quit <-chan struct{}) (uint64, board.Score) {
+func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
 	run := &runQuiescence{eval: q.Eval, b: b, quit: quit}
 	score := run.search(ctx, alpha, beta)
-	return run.nodes, b.Turn().Unit() * score
+	return run.nodes, eval.Unit(b.Turn()) * score
 }
 
 type runQuiescence struct {
@@ -33,7 +33,7 @@ type runQuiescence struct {
 }
 
 // search returns the positive score for the color.
-func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) board.Score {
+func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval.Score {
 	if search.IsClosed(r.quit) {
 		return 0
 	}
@@ -45,8 +45,8 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := turn.Unit() * evaluate(ctx, r.b, r.eval)
-	alpha = board.Max(alpha, score)
+	score := eval.Unit(turn) * evaluate(ctx, r.b, r.eval)
+	alpha = eval.Max(alpha, score)
 
 	mayRecapture := false
 	var target board.Square
@@ -59,7 +59,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 	// logw.Debugf(ctx, "SCORE: %v (last: %v, recapture=%v)= %v", r.b.Position(), lastmove, mayRecapture, score)
 
 	moves := r.b.Position().PseudoLegalMoves(turn)
-	sort.Sort(board.ByScore(moves))
+	sort.Sort(board.ByMVVLVA(moves))
 
 	for _, m := range moves {
 		if !r.b.PushMove(m) {
@@ -84,7 +84,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 		if considerable {
 			score := r.search(ctx, -beta, -alpha)
-			alpha = board.Max(alpha, -score)
+			alpha = eval.Max(alpha, -score)
 		}
 
 		r.b.PopMove()
@@ -97,17 +97,17 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta board.Score) boa
 
 	if !hasLegalMoves {
 		if result := r.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return board.MinScore
+			return eval.MinScore
 		}
 		return 0
 	}
 	return alpha
 }
 
-func evaluate(ctx context.Context, b *board.Board, evaluator eval.Evaluator) board.Score {
+func evaluate(ctx context.Context, b *board.Board, evaluator eval.Evaluator) eval.Score {
 	score := evaluator.Evaluate(ctx, b.Position(), b.Turn())
 	if b.HasCastled(b.Turn()) {
-		score += b.Turn().Unit() * 10
+		score += eval.Unit(b.Turn())
 	}
 	return score
 }

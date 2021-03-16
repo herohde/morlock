@@ -3,6 +3,7 @@ package turochamp
 
 import (
 	"context"
+	"github.com/herohde/morlock/pkg/eval"
 	"math"
 
 	"github.com/herohde/morlock/pkg/board"
@@ -11,21 +12,26 @@ import (
 // Eval implements the TUROCHAMP evaluation function.
 type Eval struct{}
 
-func (Eval) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) board.Score {
+func (Eval) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
 	mat := Material{}.Evaluate(ctx, pos, turn)
-	if mat != 0 {
-		// If nonzero, add 10k to the material score to ensure it dominates. Respect sign.
-		mat = board.Score(math.Copysign(math.Abs(float64(mat))+10000, float64(mat)))
-	}
-	return mat + PositionPlay{}.Evaluate(ctx, pos, turn)
+	pp := PositionPlay{}.Evaluate(ctx, pos, turn)
+
+	// Combine scores to ensure material strictly dominates: MMMMMP.PP.
+
+	m := eval.Score(math.Round(float64(mat)*100) * 10)
+	p := eval.Score(math.Round(float64(pp)*100) / 1000)
+
+	// println(fmt.Sprintf("POS %v MAT: %v -> %v, PP: %v -> %v => %v", pos, mat, m, pp, p, m+p))
+
+	return m + p
 }
 
-// Material returns the material advantage balance as a ratio, W/B. Turing (and Champernowne)
-// used the following piece values: pawn=1, knight=3, bishop=3½, rook=5, queen=10. We convert
-// the 100x ratio into a score that dominates the PositionPlay value to obtain Turing's semantics.
+// Material returns the material advantage balance as a ratio, W/B. Turing and Champernowne
+// used the following piece values: pawn=1, knight=3, bishop=3½, rook=5, queen=10. The ratio
+// in the range of [-226;226].
 type Material struct{}
 
-func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) board.Score {
+func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
 	own := material(pos, turn)
 	opp := material(pos, turn.Opponent())
 
@@ -33,44 +39,40 @@ func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Co
 	case own == opp:
 		return 0
 	case own > opp:
-		return turn.Unit() * ratio(own, opp)
+		return eval.Unit(turn) * eval.Crop(own/opp)
 	default: // opp > own
-		return turn.Opponent().Unit() * ratio(opp, own)
+		return eval.Unit(turn.Opponent()) * eval.Crop(opp/own)
 	}
 }
 
-func material(pos *board.Position, turn board.Color) board.Score {
-	var score board.Score
+func material(pos *board.Position, turn board.Color) eval.Score {
+	var score eval.Score
 	for _, piece := range board.QueenRookKnightBishopPawn {
-		score += pieceValue(piece) * board.Score(pos.Piece(turn, piece).PopCount())
+		score += pieceValue(piece) * eval.Score(pos.Piece(turn, piece).PopCount())
+	}
+	if score == 0 {
+		return 0.5 // half-a-pawn if only piece left is the king
 	}
 	return score
 }
 
-func pieceValue(piece board.Piece) board.Score {
+func pieceValue(piece board.Piece) eval.Score {
 	switch piece {
 	case board.King:
-		return 10000
-	case board.Queen:
-		return 1000
-	case board.Rook:
-		return 500
-	case board.Bishop:
-		return 350
-	case board.Knight:
-		return 300
-	case board.Pawn:
 		return 100
+	case board.Queen:
+		return 10
+	case board.Rook:
+		return 5
+	case board.Bishop:
+		return 3.5
+	case board.Knight:
+		return 3
+	case board.Pawn:
+		return 1
 	default:
 		panic("invalid piece")
 	}
-}
-
-func ratio(a, b board.Score) board.Score {
-	if b == 0 {
-		return a
-	}
-	return board.Score(100 * float64(a) / float64(b))
 }
 
 // PositionPlay captures the following positional evaluation functions:
@@ -97,14 +99,14 @@ func ratio(a, b board.Score) board.Score {
 //
 //  * Mates and checks. Add 1.0 point for the threat of mate and 0.5 point for a check.
 //
-// We score with a 10x multiplier to get to 1 decimal point precision as described.
+// We score with 1 decimal point precision as described. The range is [-55;55].
 type PositionPlay struct{}
 
-func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) board.Score {
-	var score board.Score
+func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
+	var score eval.Score
 
 	if pos.Castling()&board.CastlingRights(turn) != 0 {
-		score += 10
+		score += 1
 	}
 
 	// (1) Analyze mobility, castling and checks/checkmates.
@@ -120,14 +122,14 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 
 		if !mayCheckMate && next.IsCheckMate(turn.Opponent()) {
 			mayCheckMate = true
-			score += 10
+			score += 1
 		} else if !mayCheck && next.IsChecked(turn.Opponent()) {
 			mayCheck = true
-			score += 10
+			score += 1
 		}
 		if !mayCastle && m.IsCastle() {
 			mayCastle = true
-			score += 10
+			score += 1
 		}
 
 		if m.Piece != board.Pawn && !m.IsCastle() {
@@ -138,7 +140,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		}
 	}
 	for _, n := range mobility {
-		score += board.Score(10 * math.Sqrt(float64(n)))
+		score += eval.Score(math.Round(10*math.Sqrt(float64(n)))) / 10
 	}
 
 	// (2) Analyze Rook, Knight, Bishop defence.
@@ -158,10 +160,10 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 			defenders += bb.PopCount()
 		}
 		if defenders > 0 {
-			score += 10
+			score += 1
 		}
 		if defenders > 1 {
-			score += 5
+			score += 0.5
 		}
 	}
 
@@ -172,7 +174,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		safety := attackboard.PopCount()
 		safety += (attackboard & pos.Color(turn.Opponent())).PopCount()
 
-		score -= board.Score(10 * math.Sqrt(float64(safety)))
+		score -= eval.Score(math.Round(10*math.Sqrt(float64(safety)))) / 10
 	}
 
 	// (4) Analyze Pawn progress and defence.
@@ -189,15 +191,15 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 			ranks += int(board.Rank7 - from.Rank())
 		}
 
-		score += 2 * board.Score(ranks)
+		score += 0.2 * eval.Score(ranks)
 
 		for _, p := range board.KingQueenRookKnightBishop {
 			if bb := board.Attackboard(pos.Rotated(), from, p) & pos.Piece(turn, p); bb != 0 {
-				score += 3
+				score += 0.3
 				break
 			}
 		}
 	}
 
-	return turn.Unit() * score
+	return eval.Unit(turn) * score
 }
