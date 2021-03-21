@@ -41,7 +41,7 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		s := search.NewIterative(search.PVS{
+		s := search.NewIterative(search.AlphaBeta{
 			Eval: turochamp.Quiescence{
 				Eval: turochamp.Eval{},
 			},

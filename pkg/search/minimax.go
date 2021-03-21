@@ -32,9 +32,9 @@ func (m Minimax) Search(ctx context.Context, b *board.Board, depth int, quit <-c
 	run := &runMinimax{eval: m.Eval, b: b, quit: quit}
 	score, moves := run.search(ctx, depth)
 	if IsClosed(quit) {
-		return 0, 0, nil, ErrHalted
+		return 0, eval.Score{}, nil, ErrHalted
 	}
-	return run.nodes, eval.Unit(b.Turn()) * score, moves, nil
+	return run.nodes, score, moves, nil
 }
 
 type runMinimax struct {
@@ -50,17 +50,17 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 	m.nodes++
 
 	if IsClosed(m.quit) {
-		return 0, nil
+		return eval.ZeroScore, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
-		return 0, nil
+		return eval.ZeroScore, nil
 	}
 	if depth == 0 {
-		return eval.Unit(m.b.Turn()) * m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn()), nil
+		return m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn()), nil
 	}
 
 	hasLegalMove := false
-	score := eval.NegInf
+	score := eval.NegInfScore
 	var pv []board.Move
 
 	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
@@ -70,8 +70,9 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 			m.b.PopMove()
 
 			hasLegalMove = true
-			if score < -s {
-				score = -s
+			s = eval.IncrementMateInX(s).Negate()
+			if score.Less(s) {
+				score = s
 				pv = append([]board.Move{move}, rem...)
 			}
 		}
@@ -79,9 +80,9 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 
 	if !hasLegalMove {
 		if result := m.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return eval.MinScore, nil
+			return eval.NegInfScore, nil
 		}
-		return 0, nil
+		return eval.ZeroScore, nil
 	}
 
 	return score, pv

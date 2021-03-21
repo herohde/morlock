@@ -10,6 +10,7 @@ import (
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/engine"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"go.uber.org/atomic"
@@ -520,7 +521,12 @@ func printPV(pv search.PV) string {
 	if len(pv.Moves) > 0 {
 		parts = append(parts, fmt.Sprintf("depth %v", len(pv.Moves)))
 	}
-	parts = append(parts, fmt.Sprintf("score cp %v", int16(pv.Score)))
+	if pv.Score.Type != eval.Heuristic {
+		moves := eval.IncrementMateInX(pv.Score).Mate / 2
+		parts = append(parts, fmt.Sprintf("score mate %v", moves))
+	} else {
+		parts = append(parts, fmt.Sprintf("score cp %v", int(pv.Score.Pawns*100)))
+	}
 	if pv.Nodes > 0 {
 		parts = append(parts, fmt.Sprintf("nodes %v", pv.Nodes))
 	}

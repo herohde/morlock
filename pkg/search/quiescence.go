@@ -15,7 +15,7 @@ type Quiescence struct {
 func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
 	run := &runQuiescence{eval: q.Eval, b: b, quit: quit}
 	score := run.search(ctx, alpha, beta)
-	return run.nodes, eval.Unit(b.Turn()) * score
+	return run.nodes, score
 }
 
 type runQuiescence struct {
@@ -29,20 +29,21 @@ type runQuiescence struct {
 // search returns the positive score for the color.
 func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval.Score {
 	if IsClosed(r.quit) {
-		return 0
+		return eval.ZeroScore
 	}
 	if r.b.Result().Outcome == board.Draw {
-		return 0
+		return eval.ZeroScore
 	}
 
 	r.nodes++
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := eval.Unit(turn) * r.eval.Evaluate(ctx, r.b.Position(), turn)
+	score := r.eval.Evaluate(ctx, r.b.Position(), turn)
 	alpha = eval.Max(alpha, score)
 
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
+	// Also do not report mate-in-X endings.
 
 	moves := r.b.Position().PseudoLegalMoves(turn)
 	sort.Sort(board.ByMVVLVA(moves))
@@ -63,23 +64,24 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 		}
 
 		if explore {
-			score := r.search(ctx, -beta, -alpha)
-			alpha = eval.Max(alpha, -score)
+			score := r.search(ctx, beta.Negate(), alpha.Negate())
+			score = eval.IncrementMateInX(score).Negate()
+			alpha = eval.Max(alpha, score)
 		}
 
 		r.b.PopMove()
 		hasLegalMoves = true
 
-		if alpha >= beta {
+		if alpha == beta || beta.Less(alpha) {
 			break // cutoff
 		}
 	}
 
 	if !hasLegalMoves {
 		if result := r.b.AdjudicateNoLegalMoves(); result.Reason == board.Checkmate {
-			return eval.MinScore
+			return eval.NegInfScore
 		}
-		return 0
+		return eval.ZeroScore
 	}
 	return alpha
 }

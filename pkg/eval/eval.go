@@ -12,19 +12,19 @@ type Evaluator interface {
 	Evaluate(ctx context.Context, pos *board.Position, turn board.Color) Score
 }
 
-// Material returns the nominal material advantage balance.
+// Material returns the nominal material advantage balance for the side to move.
 type Material struct{}
 
 func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) Score {
-	var score Score
+	var pawns Pawns
 	for p := board.ZeroPiece; p < board.NumPieces; p++ {
-		score += Score(pos.Piece(board.White, p).PopCount()-pos.Piece(board.Black, p).PopCount()) * NominalValue(p)
+		pawns += Pawns(pos.Piece(turn, p).PopCount()-pos.Piece(turn.Opponent(), p).PopCount()) * NominalValue(p)
 	}
-	return score
+	return HeuristicScore(pawns)
 }
 
 // NominalValue the absolute nominal value in pawns of a piece. The King has an arbitrary value of 100 pawns.
-func NominalValue(p board.Piece) Score {
+func NominalValue(p board.Piece) Pawns {
 	switch p {
 	case board.Pawn:
 		return 1

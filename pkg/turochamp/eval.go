@@ -18,17 +18,18 @@ func (Eval) Evaluate(ctx context.Context, pos *board.Position, turn board.Color)
 
 	// Combine scores to ensure material strictly dominates: MMMMMP.PP.
 
-	m := eval.Score(math.Round(float64(mat)*100) * 10)
-	p := eval.Score(math.Round(float64(pp)*100) / 1000)
+	m := eval.Pawns(math.Round(float64(mat.Pawns)*100) * 10)
+	p := eval.Pawns(math.Round(float64(pp.Pawns)*100) / 1000)
 
 	// println(fmt.Sprintf("POS %v MAT: %v -> %v, PP: %v -> %v => %v", pos, mat, m, pp, p, m+p))
 
-	return m + p
+	return eval.HeuristicScore(m + p)
 }
 
 // Material returns the material advantage balance as a ratio, W/B. Turing and Champernowne
 // used the following piece values: pawn=1, knight=3, bishop=3½, rook=5, queen=10. The ratio
-// in the range of [-226;226].
+// in the range of [-226;226]. We use a negative ratio for when behind to let position-play
+// dominate in that case.
 type Material struct{}
 
 func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
@@ -37,18 +38,18 @@ func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Co
 
 	switch {
 	case own == opp:
-		return 0
+		return eval.ZeroScore
 	case own > opp:
-		return eval.Unit(turn) * eval.Crop(own/opp)
+		return eval.HeuristicScore(own / opp)
 	default: // opp > own
-		return eval.Unit(turn.Opponent()) * eval.Crop(opp/own)
+		return eval.HeuristicScore(-opp / own)
 	}
 }
 
-func material(pos *board.Position, turn board.Color) eval.Score {
-	var score eval.Score
+func material(pos *board.Position, turn board.Color) eval.Pawns {
+	var score eval.Pawns
 	for _, piece := range board.QueenRookKnightBishopPawn {
-		score += pieceValue(piece) * eval.Score(pos.Piece(turn, piece).PopCount())
+		score += pieceValue(piece) * eval.Pawns(pos.Piece(turn, piece).PopCount())
 	}
 	if score == 0 {
 		return 0.5 // half-a-pawn if only piece left is the king
@@ -56,7 +57,7 @@ func material(pos *board.Position, turn board.Color) eval.Score {
 	return score
 }
 
-func pieceValue(piece board.Piece) eval.Score {
+func pieceValue(piece board.Piece) eval.Pawns {
 	switch piece {
 	case board.King:
 		return 100
@@ -103,7 +104,7 @@ func pieceValue(piece board.Piece) eval.Score {
 type PositionPlay struct{}
 
 func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
-	var score eval.Score
+	var score eval.Pawns
 
 	if pos.Castling()&board.CastlingRights(turn) != 0 {
 		score += 1
@@ -140,7 +141,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		}
 	}
 	for _, n := range mobility {
-		score += eval.Score(math.Round(10*math.Sqrt(float64(n)))) / 10
+		score += eval.Pawns(math.Round(10*math.Sqrt(float64(n)))) / 10
 	}
 
 	// (2) Analyze Rook, Knight, Bishop defence.
@@ -174,7 +175,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		safety := attackboard.PopCount()
 		safety += (attackboard & pos.Color(turn.Opponent())).PopCount()
 
-		score -= eval.Score(math.Round(10*math.Sqrt(float64(safety)))) / 10
+		score -= eval.Pawns(math.Round(10*math.Sqrt(float64(safety)))) / 10
 	}
 
 	// (4) Analyze Pawn progress and defence.
@@ -191,7 +192,7 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 			ranks += int(board.Rank7 - from.Rank())
 		}
 
-		score += 0.2 * eval.Score(ranks)
+		score += 0.2 * eval.Pawns(ranks)
 
 		for _, p := range board.KingQueenRookKnightBishop {
 			if bb := board.Attackboard(pos.Rotated(), from, p) & pos.Piece(turn, p); bb != 0 {
@@ -201,5 +202,5 @@ func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn boar
 		}
 	}
 
-	return eval.Unit(turn) * score
+	return eval.HeuristicScore(score)
 }

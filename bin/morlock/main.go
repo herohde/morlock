@@ -32,7 +32,7 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		s := search.PVS{
+		s := search.AlphaBeta{
 			Eval: search.Quiescence{
 				Eval: eval.Material{},
 			},
