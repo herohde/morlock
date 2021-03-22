@@ -518,11 +518,9 @@ func printPV(pv search.PV) string {
 	// "info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3"
 
 	parts := []string{"info"}
-	if len(pv.Moves) > 0 {
-		parts = append(parts, fmt.Sprintf("depth %v", len(pv.Moves)))
-	}
-	if pv.Score.Type != eval.Heuristic {
-		moves := eval.IncrementMateInX(pv.Score).Mate / 2
+	parts = append(parts, fmt.Sprintf("depth %v", pv.Depth))
+	if !pv.Score.IsHeuristic() {
+		moves := eval.IncrementMateDistance(pv.Score).Mate / 2
 		parts = append(parts, fmt.Sprintf("score mate %v", moves))
 	} else {
 		parts = append(parts, fmt.Sprintf("score cp %v", int(pv.Score.Pawns*100)))

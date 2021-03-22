@@ -16,6 +16,7 @@ var ErrHalted = errors.New("search halted")
 
 // PV represents the principal variation for some search depth.
 type PV struct {
+	Depth int
 	Moves []board.Move
 	Score eval.Score
 	Nodes uint64
@@ -24,7 +25,7 @@ type PV struct {
 
 func (p PV) String() string {
 	pv := board.PrintMoves(p.Moves)
-	return fmt.Sprintf("depth=%v score=%v nodes=%v time=%v pv=%v", len(p.Moves), p.Score, p.Nodes, p.Time, pv)
+	return fmt.Sprintf("depth=%v score=%v nodes=%v time=%v pv=%v", p.Depth, p.Score, p.Nodes, p.Time, pv)
 }
 
 // Options hold dynamic search options. The user may change these on a particular search.

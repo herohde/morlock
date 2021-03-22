@@ -65,6 +65,7 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 		}
 
 		pv := PV{
+			Depth: depth,
 			Nodes: nodes,
 			Score: score,
 			Moves: moves,
@@ -86,6 +87,9 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 		h.markInitialized()
 		if opt.DepthLimit != nil && depth == *opt.DepthLimit {
 			return // halt: reached max depth
+		}
+		if md, ok := score.MateDistance(); ok && int(md) < depth {
+			return // halt: forced mate found within full width search. Exact result.
 		}
 		if useSoft && soft < time.Since(start) {
 			return // halt: exceeded soft time limit. Do not start new search.

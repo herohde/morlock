@@ -6,6 +6,16 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 21. mar 2021; Version 0.86 ###
+  - Revamped Score w/ float32 heuristic; added MateInX. TUROCHAMP didn't pick easy mates.
+  - Used MVV/LVA in search. Reverted to alpha-beta, for now, as null-window is trickier with float eval.
+  - Fixed evaluation bugs after watching TUROCHAMP play as "turochamp-2ply" on lichess.org. Running on "red" Pi.
+      * Elo after 260 games: 1655/bullet, 1424/blitz, 1257/Rapid.
+
+TODO:
+  - Maybe try another classic engine, such as Sargon? Well-documented.
+  - Search improvements are moot unless we go deeper, perhaps except for some Killer heuristic.
+
 ### 12. mar 2021; Version 0.85 ###
   - Completed TUROCHAMP.
   - Bad blunder: "2b2rk1/r1Pp2p1/ppn1p3/q3N1Bp/3P4/2NQR2P/PPP2PP1/R5K1 b - - 4 18", because UCI quit after 1s. Fixed.

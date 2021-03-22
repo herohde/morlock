@@ -47,7 +47,7 @@ func main() {
 			},
 		}, *ply)
 
-		e := engine.New(ctx, "TUROCHAMP", "Alan Turing and David Champernowne", s)
+		e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s)
 
 		driver, out := uci.NewDriver(ctx, e, in)
 		go engine.WriteStdoutLines(ctx, out)

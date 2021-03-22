@@ -70,7 +70,7 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 			m.b.PopMove()
 
 			hasLegalMove = true
-			s = eval.IncrementMateInX(s).Negate()
+			s = eval.IncrementMateDistance(s).Negate()
 			if score.Less(s) {
 				score = s
 				pv = append([]board.Move{move}, rem...)

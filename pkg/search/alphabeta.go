@@ -79,7 +79,7 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 			m.b.PopMove()
 
 			hasLegalMove = true
-			score = eval.IncrementMateInX(score).Negate()
+			score = eval.IncrementMateDistance(score).Negate()
 			if alpha.Less(score) {
 				alpha = score
 				pv = append([]board.Move{move}, rem...)

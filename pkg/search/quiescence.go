@@ -65,7 +65,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 
 		if explore {
 			score := r.search(ctx, beta.Negate(), alpha.Negate())
-			score = eval.IncrementMateInX(score).Negate()
+			score = eval.IncrementMateDistance(score).Negate()
 			alpha = eval.Max(alpha, score)
 		}
 

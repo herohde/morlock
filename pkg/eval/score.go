@@ -43,6 +43,38 @@ func MateInXScore(mate int8) Score {
 	return Score{Type: MateInX, Mate: mate}
 }
 
+func (s Score) IsHeuristic() bool {
+	return s.Type == Heuristic
+}
+
+func (s Score) IsMateInX() bool {
+	return s.Type == MateInX
+}
+
+func (s Score) IsInf() bool {
+	return s.Type == Inf
+}
+
+func (s Score) IsNegInf() bool {
+	return s.Type == NegInf
+}
+
+// MateDistance returns the ply distance to CheckMate, if known. If a forced mate is possible,
+// there is generally no reason to search deeper.
+func (s Score) MateDistance() (int8, bool) {
+	switch s.Type {
+	case MateInX:
+		if s.Mate < 0 {
+			return -s.Mate, true
+		}
+		return s.Mate, true
+	case Inf, NegInf:
+		return 0, true
+	default:
+		return 0, false
+	}
+}
+
 // Negates returns the negative score, as viewed from the opponent.
 func (s Score) Negate() Score {
 	switch s.Type {
@@ -109,8 +141,8 @@ func (s Score) String() string {
 	}
 }
 
-// IncrementMateInX adds 1 ply to a MateInX or Inf/NegInf. Heuristic scores are unchanged.
-func IncrementMateInX(s Score) Score {
+// IncrementMateDistance adds 1 ply to a MateInX or Inf/NegInf. Heuristic scores are unchanged.
+func IncrementMateDistance(s Score) Score {
 	switch s.Type {
 	case Inf:
 		return MateInXScore(1)
