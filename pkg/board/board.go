@@ -81,6 +81,10 @@ func (b *Board) Turn() Color {
 	return b.turn
 }
 
+func (b *Board) NoProgress() int {
+	return b.current.noprogress
+}
+
 func (b *Board) FullMoves() int {
 	return b.fullmoves
 }

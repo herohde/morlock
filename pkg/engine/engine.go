@@ -47,7 +47,15 @@ func (e *Engine) Author() string {
 	return e.author
 }
 
-// Reset resets the engine to a new starting position.
+// Position returns the current position in FEN format.
+func (e *Engine) Position() string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return fen.Encode(e.b.Position(), e.b.Turn(), e.b.NoProgress(), e.b.FullMoves())
+}
+
+// Reset resets the engine to a new starting position in FEN format.
 func (e *Engine) Reset(ctx context.Context, position string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -67,11 +75,16 @@ func (e *Engine) Reset(ctx context.Context, position string) error {
 }
 
 // Move selects the given move, usually an opponent move.
-func (e *Engine) Move(ctx context.Context, candidate board.Move) error {
+func (e *Engine) Move(ctx context.Context, move string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logw.Infof(ctx, "Move %v", candidate)
+	logw.Infof(ctx, "Move %v", move)
+
+	candidate, err := board.ParseMove(move)
+	if err != nil {
+		return fmt.Errorf("invalid move: %v", err)
+	}
 
 	_, _ = e.haltSearchIfActive(ctx)
 
