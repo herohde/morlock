@@ -56,7 +56,7 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 		return eval.ZeroScore, nil
 	}
 	if depth == 0 {
-		return m.eval.Evaluate(ctx, m.b.Position(), m.b.Turn()), nil
+		return m.eval.Evaluate(ctx, m.b), nil
 	}
 
 	hasLegalMove := false

@@ -13,7 +13,6 @@ import (
 //   (2) Capture of en prise pieces are considerable.
 //   (3) Capture of higher value pieces are considerable.
 //   (4) Checkmate are considerable.
-// Additionally, it adds the "has already castled" bonus to the evaluator.
 type Quiescence struct {
 	Eval eval.Evaluator
 }
@@ -45,7 +44,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := evaluate(ctx, r.b, r.eval)
+	score := r.eval.Evaluate(ctx, r.b)
 	alpha = eval.Max(alpha, score)
 
 	mayRecapture := false
@@ -103,12 +102,4 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 		return eval.ZeroScore
 	}
 	return alpha
-}
-
-func evaluate(ctx context.Context, b *board.Board, evaluator eval.Evaluator) eval.Score {
-	score := evaluator.Evaluate(ctx, b.Position(), b.Turn())
-	if b.HasCastled(b.Turn()) && score.Type == eval.Heuristic {
-		score = eval.HeuristicScore(score.Pawns + 0.1)
-	}
-	return score
 }

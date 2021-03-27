@@ -39,7 +39,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := r.eval.Evaluate(ctx, r.b.Position(), turn)
+	score := r.eval.Evaluate(ctx, r.b)
 	alpha = eval.Max(alpha, score)
 
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.

@@ -9,7 +9,7 @@ import (
 type Points struct {
 }
 
-func (p Points) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
+func (p Points) Evaluate(ctx context.Context, b *board.Board) eval.Score {
 	panic("implement me")
 }
 

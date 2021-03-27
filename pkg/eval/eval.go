@@ -9,13 +9,16 @@ import (
 // Evaluator is a static position evaluator.
 type Evaluator interface {
 	// Evaluate returns the position score.
-	Evaluate(ctx context.Context, pos *board.Position, turn board.Color) Score
+	Evaluate(ctx context.Context, b *board.Board) Score
 }
 
 // Material returns the nominal material advantage balance for the side to move.
 type Material struct{}
 
-func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) Score {
+func (Material) Evaluate(ctx context.Context, b *board.Board) Score {
+	pos := b.Position()
+	turn := b.Turn()
+
 	var pawns Pawns
 	for p := board.ZeroPiece; p < board.NumPieces; p++ {
 		pawns += Pawns(pos.Piece(turn, p).PopCount()-pos.Piece(turn.Opponent(), p).PopCount()) * NominalValue(p)

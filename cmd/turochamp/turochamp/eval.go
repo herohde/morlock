@@ -12,9 +12,9 @@ import (
 // Eval implements the TUROCHAMP evaluation function.
 type Eval struct{}
 
-func (Eval) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
-	mat := Material{}.Evaluate(ctx, pos, turn)
-	pp := PositionPlay{}.Evaluate(ctx, pos, turn)
+func (Eval) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+	mat := Material{}.Evaluate(ctx, b)
+	pp := PositionPlay{}.Evaluate(ctx, b)
 
 	// Combine scores to ensure material strictly dominates: MMMMMP.PP.
 
@@ -32,7 +32,10 @@ func (Eval) Evaluate(ctx context.Context, pos *board.Position, turn board.Color)
 // dominate in that case.
 type Material struct{}
 
-func (Material) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
+func (Material) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+	pos := b.Position()
+	turn := b.Turn()
+
 	own := material(pos, turn)
 	opp := material(pos, turn.Opponent())
 
@@ -103,13 +106,18 @@ func pieceValue(piece board.Piece) eval.Pawns {
 // We score with 1 decimal point precision as described. The range is [-55;55].
 type PositionPlay struct{}
 
-func (PositionPlay) Evaluate(ctx context.Context, pos *board.Position, turn board.Color) eval.Score {
+func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+	pos := b.Position()
+	turn := b.Turn()
+
 	var score eval.Pawns
 
 	if pos.Castling()&board.CastlingRights(turn) != 0 {
 		score += 1
 	}
-
+	if b.HasCastled(turn) {
+		score += 1
+	}
 	// (1) Analyze mobility, castling and checks/checkmates.
 
 	mobility := map[board.Square]int{}

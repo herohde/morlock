@@ -3,6 +3,7 @@ package turochamp_test
 import (
 	"context"
 	"github.com/herohde/morlock/cmd/turochamp/turochamp"
+	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/stretchr/testify/assert"
@@ -45,10 +46,11 @@ func TestMaterial(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pos, turn, _, _, err := fen.Decode(tt.fen)
+		pos, turn, np, fm, err := fen.Decode(tt.fen)
 		require.NoError(t, err)
+		b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
 
-		actual := turochamp.Material{}.Evaluate(context.Background(), pos, turn)
+		actual := turochamp.Material{}.Evaluate(context.Background(), b)
 		assert.Equal(t, actual.String(), tt.expected.String())
 	}
 }
@@ -70,10 +72,11 @@ func TestPositionPlay(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pos, turn, _, _, err := fen.Decode(tt.fen)
+		pos, turn, np, fm, err := fen.Decode(tt.fen)
 		require.NoError(t, err)
+		b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
 
-		actual := turochamp.PositionPlay{}.Evaluate(context.Background(), pos, turn)
+		actual := turochamp.PositionPlay{}.Evaluate(context.Background(), b)
 		assert.Equal(t, actual.String(), tt.expected.String())
 	}
 }
@@ -100,10 +103,11 @@ func TestEval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pos, turn, _, _, err := fen.Decode(tt.fen)
+		pos, turn, np, fm, err := fen.Decode(tt.fen)
 		require.NoError(t, err)
+		b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
 
-		actual := turochamp.Eval{}.Evaluate(context.Background(), pos, turn)
+		actual := turochamp.Eval{}.Evaluate(context.Background(), b)
 		assert.Equal(t, actual.String(), tt.expected.String())
 	}
 }

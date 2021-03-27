@@ -23,5 +23,5 @@ type ZeroPly struct {
 }
 
 func (z ZeroPly) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
-	return 1, z.Eval.Evaluate(ctx, b.Position(), b.Turn())
+	return 1, z.Eval.Evaluate(ctx, b)
 }
