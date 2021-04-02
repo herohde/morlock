@@ -42,7 +42,8 @@ func main() {
 		// Use UCI protocol.
 
 		s := search.NewIterative(search.AlphaBeta{
-			Eval: turochamp.Quiescence{
+			Eval: search.Quiescence{
+				Pick: turochamp.IsConsiderableMove,
 				Eval: turochamp.Eval{},
 			},
 		}, *ply)

@@ -17,6 +17,24 @@ const (
 // Pawns presents a fractional number of pawns.
 type Pawns float32
 
+func (p Pawns) String() string {
+	return fmt.Sprintf("%.2f", p)
+}
+
+// Limit crops the value to +/- limit.
+func Limit(pawns, limit Pawns) Pawns {
+	low, high := pawns-limit, pawns+limit
+
+	switch {
+	case pawns < low:
+		return low
+	case high < pawns:
+		return high
+	default:
+		return pawns
+	}
+}
+
 // Score is signed position score in "pawns", unless decided or mate-in-X. Positive favors
 // the side to move. If all pawns become queens and the opponent has only the king left,
 // the standard material advantage score is: 9*8 (p) + 9 (q) + 2*5 (r) + 2*3 (k) + 2*3 (b)
@@ -129,7 +147,7 @@ func (s Score) Less(o Score) bool {
 func (s Score) String() string {
 	switch s.Type {
 	case Heuristic:
-		return fmt.Sprintf("%.2f", s.Pawns)
+		return s.Pawns.String()
 	case MateInX:
 		return fmt.Sprintf("M%v", s.Mate)
 	case Inf:

@@ -19,7 +19,9 @@ const (
 )
 
 var (
+	KingQueen                 = []Piece{King, Queen}
 	KingQueenRookKnightBishop = []Piece{King, Queen, Rook, Knight, Bishop}
+	QueenRookBishop           = []Piece{Queen, Rook, Bishop}
 	QueenRookKnightBishop     = []Piece{Queen, Rook, Knight, Bishop}
 	QueenRookKnightBishopPawn = []Piece{Queen, Rook, Knight, Bishop, Pawn}
 )

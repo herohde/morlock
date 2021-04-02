@@ -3,9 +3,9 @@ package turochamp_test
 import (
 	"context"
 	"github.com/herohde/morlock/cmd/turochamp/turochamp"
-	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/eval"
+	"github.com/herohde/morlock/pkg/search"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -27,18 +27,13 @@ func TestQuiescence(t *testing.T) {
 		{"2b2rk1/r1Pp2p1/ppn1p3/q3N1Bp/3P4/2NQR2P/PPP2PP1/R5K1 b - - 4 18", nil, 2, eval.HeuristicScore(-1122.23)},
 	}
 
-	qs := turochamp.Quiescence{Eval: turochamp.Eval{}}
+	qs := search.Quiescence{
+		Pick: turochamp.IsConsiderableMove,
+		Eval: turochamp.Eval{}}
 
 	for _, tt := range tests {
-		pos, turn, np, fm, err := fen.Decode(tt.fen)
+		b, err := fen.NewBoard(tt.fen, tt.moves...)
 		require.NoError(t, err)
-
-		b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
-		for _, m := range tt.moves {
-			move, err := board.ParseMove(m)
-			require.NoError(t, err)
-			b.PushMove(move)
-		}
 
 		nodes, actual := qs.QuietSearch(context.Background(), b, eval.NegInfScore, eval.InfScore, make(chan struct{}))
 		assert.Equal(t, nodes, tt.nodes, "failed: %v", tt.fen)

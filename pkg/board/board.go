@@ -1,7 +1,9 @@
 // Package board contain chess board representation and utilities.
 package board
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	repetition3Limit   = 3
@@ -216,6 +218,14 @@ func (b *Board) LastMove() (Move, bool) {
 	return Move{}, false
 }
 
+// LastMove returns the second-to-last move, if any.
+func (b *Board) SecondToLastMove() (Move, bool) {
+	if b.current.prev != nil && b.current.prev.prev != nil {
+		return b.current.prev.prev.next, true
+	}
+	return Move{}, false
+}
+
 // HasCasted returns true iff the color has castled.
 func (b *Board) HasCastled(c Color) bool {
 	t := b.turn.Opponent()
@@ -229,6 +239,20 @@ func (b *Board) HasCastled(c Color) bool {
 		cur = cur.prev
 	}
 	return false
+}
+
+// HasMoved returns which pieces have moved, up to the given limit.
+func (b *Board) HasMoved(limit int) Bitboard {
+	var ret Bitboard
+
+	cur := b.current.prev
+	for cur != nil && limit > 0 {
+		ret |= BitMask(cur.next.To)
+		cur = cur.prev
+		limit--
+	}
+
+	return ret & b.current.pos.All()
 }
 
 func (b *Board) String() string {

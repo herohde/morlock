@@ -7,18 +7,24 @@ import (
 	"sort"
 )
 
+// Selection defines move selection. It is required by quiescence search, but optional
+// for full search. Selection turns true if the move just made should be explored.
+type Selection func(ctx context.Context, move board.Move, b *board.Board) bool
+
 // Quiescence implements a configurable alpha-beta QuietSearch.
 type Quiescence struct {
+	Pick Selection
 	Eval eval.Evaluator
 }
 
 func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
-	run := &runQuiescence{eval: q.Eval, b: b, quit: quit}
+	run := &runQuiescence{pick: q.Pick, eval: q.Eval, b: b, quit: quit}
 	score := run.search(ctx, alpha, beta)
 	return run.nodes, score
 }
 
 type runQuiescence struct {
+	pick  Selection
 	eval  eval.Evaluator
 	b     *board.Board
 	nodes uint64
@@ -39,7 +45,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := r.eval.Evaluate(ctx, r.b)
+	score := eval.HeuristicScore(r.eval.Evaluate(ctx, r.b))
 	alpha = eval.Max(alpha, score)
 
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
@@ -53,17 +59,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 			continue
 		}
 
-		explore := m.IsPromotion()
-		if m.IsCapture() {
-			if eval.NominalValue(m.Piece) < eval.NominalValue(m.Capture) {
-				explore = true
-			}
-			if !r.b.Position().IsAttacked(turn, m.To) {
-				explore = true
-			}
-		}
-
-		if explore {
+		if r.pick(ctx, m, r.b) {
 			score := r.search(ctx, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			alpha = eval.Max(alpha, score)
@@ -84,4 +80,18 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 		return eval.ZeroScore
 	}
 	return alpha
+}
+
+// IsQuickGain is a move selection for immediate material gain: promotions and captures.
+func IsQuickGain(ctx context.Context, m board.Move, b *board.Board) bool {
+	explore := m.IsPromotion()
+	if m.IsCapture() {
+		if eval.NominalValue(m.Piece) < eval.NominalValue(m.Capture) {
+			explore = true
+		}
+		if !b.Position().IsAttacked(b.Turn().Opponent(), m.To) {
+			explore = true
+		}
+	}
+	return explore
 }

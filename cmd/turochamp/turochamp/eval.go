@@ -12,18 +12,18 @@ import (
 // Eval implements the TUROCHAMP evaluation function.
 type Eval struct{}
 
-func (Eval) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+func (Eval) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	mat := Material{}.Evaluate(ctx, b)
 	pp := PositionPlay{}.Evaluate(ctx, b)
 
 	// Combine scores to ensure material strictly dominates: MMMMMP.PP.
 
-	m := eval.Pawns(math.Round(float64(mat.Pawns)*100) * 10)
-	p := eval.Pawns(math.Round(float64(pp.Pawns)*100) / 1000)
+	m := eval.Pawns(math.Round(float64(mat)*100) * 10)
+	p := eval.Pawns(math.Round(float64(pp)*100) / 1000)
 
 	// println(fmt.Sprintf("POS %v MAT: %v -> %v, PP: %v -> %v => %v", pos, mat, m, pp, p, m+p))
 
-	return eval.HeuristicScore(m + p)
+	return m + p
 }
 
 // Material returns the material advantage balance as a ratio, W/B. Turing and Champernowne
@@ -32,7 +32,7 @@ func (Eval) Evaluate(ctx context.Context, b *board.Board) eval.Score {
 // dominate in that case.
 type Material struct{}
 
-func (Material) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+func (Material) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pos := b.Position()
 	turn := b.Turn()
 
@@ -41,11 +41,11 @@ func (Material) Evaluate(ctx context.Context, b *board.Board) eval.Score {
 
 	switch {
 	case own == opp:
-		return eval.ZeroScore
+		return 0
 	case own > opp:
-		return eval.HeuristicScore(own / opp)
+		return own / opp
 	default: // opp > own
-		return eval.HeuristicScore(-opp / own)
+		return -opp / own
 	}
 }
 
@@ -106,7 +106,7 @@ func pieceValue(piece board.Piece) eval.Pawns {
 // We score with 1 decimal point precision as described. The range is [-55;55].
 type PositionPlay struct{}
 
-func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Score {
+func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pos := b.Position()
 	turn := b.Turn()
 
@@ -210,5 +210,5 @@ func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Score {
 		}
 	}
 
-	return eval.HeuristicScore(score)
+	return score
 }

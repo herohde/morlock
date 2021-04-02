@@ -2,7 +2,6 @@ package search_test
 
 import (
 	"context"
-	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
@@ -37,10 +36,8 @@ func TestAlphaBeta(t *testing.T) {
 
 	t.Run("correctness", func(t *testing.T) {
 		for _, tt := range tests {
-			pos, turn, np, fm, err := fen.Decode(tt.fen)
+			b, err := fen.NewBoard(tt.fen)
 			require.NoError(t, err)
-
-			b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
 
 			n, actual, _, _ := pvs.Search(ctx, b, tt.depth, make(chan struct{}))
 			assert.Lessf(t, n, uint64(16000), "too many nodes: %v", tt.fen)
@@ -54,10 +51,8 @@ func TestAlphaBeta(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			pos, turn, np, fm, err := fen.Decode(tt.fen)
+			b, err := fen.NewBoard(tt.fen)
 			require.NoError(t, err)
-
-			b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
 
 			n, actual, _, _ := pvs.Search(ctx, b, tt.depth, make(chan struct{}))
 			m, expected, _, _ := minimax.Search(ctx, b, tt.depth, make(chan struct{}))

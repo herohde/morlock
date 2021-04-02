@@ -137,6 +137,17 @@ func (s Square) String() string {
 	return fmt.Sprintf("%v%v", s.File(), s.Rank())
 }
 
+// IsSameRankOrFile returns true if the squares are on the same rank or same file.
+func IsSameRankOrFile(a, b Square) bool {
+	return a.File() == b.File() || a.Rank() == b.Rank()
+}
+
+// IsSameDiagonal returns true if the squares are on the same diagonal.
+func IsSameDiagonal(a, b Square) bool {
+	x, y := a.File().V()-b.File().V(), a.Rank().V()-b.Rank().V()
+	return x == y || x == -y
+}
+
 // Rank represents a chess board rank from Rank1=0, ..Rank8=7. 3bits.
 type Rank uint8
 

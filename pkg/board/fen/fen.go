@@ -14,6 +14,27 @@ const (
 	Initial = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 )
 
+// NewBoard returns a Board for the position with moves. Convenience function.
+func NewBoard(startpos string, moves ...string) (*board.Board, error) {
+	pos, turn, np, fm, err := Decode(startpos)
+	if err != nil {
+		return nil, err
+	}
+
+	b := board.NewBoard(board.NewZobristTable(0), pos, turn, np, fm)
+	for _, m := range moves {
+		move, err := board.ParseMove(m)
+		if err != nil {
+			return nil, fmt.Errorf("invalid move: %v", m)
+		}
+		if !b.PushMove(move) {
+			return nil, fmt.Errorf("illegal move: %v", m)
+		}
+	}
+
+	return b, nil
+}
+
 // Decode returns a new position and game status from a FEN description.
 //
 // Example:
@@ -156,6 +177,12 @@ func Encode(pos *board.Position, c board.Color, noprogress, fullmoves int) strin
 	}
 
 	return fmt.Sprintf("%v %v %v %v %v %v", sb.String(), turn, castling, ep, noprogress, fullmoves)
+}
+
+// Strip returns a FEN position without noprogress and move number. Useful as key.
+func Strip(pos string) string {
+	parts := strings.Split(pos, " ")
+	return strings.Join(parts[:4], " ")
 }
 
 func parseCastling(str string) (board.Castling, bool) {

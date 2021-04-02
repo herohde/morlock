@@ -8,7 +8,6 @@ import (
 	"github.com/herohde/morlock/cmd/sargon/sargon"
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/uci"
-	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
@@ -44,15 +43,16 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
+		points := &sargon.Points{}
 		s := search.NewIterative(search.AlphaBeta{
-			Eval: search.Quiescence{
-				Eval: eval.Material{},
+			Eval: sargon.OnePlyIfChecked{
+				Eval: points,
 			},
-		}, *ply)
+		}, *ply, points.Reset)
 
 		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s)
 
-		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(sargon.Book{}, time.Now().UnixNano()))
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

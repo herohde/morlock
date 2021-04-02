@@ -34,6 +34,7 @@ func main() {
 
 		s := search.AlphaBeta{
 			Eval: search.Quiescence{
+				Pick: search.IsQuickGain,
 				Eval: eval.Material{},
 			},
 		}

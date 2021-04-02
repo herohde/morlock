@@ -50,10 +50,10 @@ func NewBook(lines []Line) (Book, error) {
 					return nil, fmt.Errorf("invalid line '%v': move %v not legal", line, next)
 				}
 
-				if m[fenKey(key)] == nil {
-					m[fenKey(key)] = map[board.Move]bool{}
+				if m[fen.Strip(key)] == nil {
+					m[fen.Strip(key)] = map[board.Move]bool{}
 				}
-				m[fenKey(key)][candidate] = true
+				m[fen.Strip(key)][candidate] = true
 
 				key = fen.Encode(p, turn.Opponent(), 0, 1)
 				break
@@ -81,11 +81,6 @@ type book struct {
 	moves map[string][]board.Move // cropped fen -> []move
 }
 
-func (b *book) Find(ctx context.Context, fen string) ([]board.Move, error) {
-	return b.moves[fenKey(fen)], nil
-}
-
-func fenKey(pos string) string {
-	parts := strings.Split(pos, " ")
-	return strings.Join(parts[:4], " ")
+func (b *book) Find(ctx context.Context, pos string) ([]board.Move, error) {
+	return b.moves[fen.Strip(pos)], nil
 }

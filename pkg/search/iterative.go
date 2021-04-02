@@ -9,22 +9,31 @@ import (
 	"time"
 )
 
+// Hook offers easy insertion of custom logic on search initialization.
+type Hook func(ctx context.Context, b *board.Board)
+
 // Iterative is a search harness for iterative deepening search.
 type Iterative struct {
 	search     Search
 	depthLimit int // 0 if not max
+	hooks      []Hook
 }
 
-func NewIterative(search Search, depthLimit int) Launcher {
+func NewIterative(search Search, depthLimit int, hooks ...Hook) Launcher {
 	return &Iterative{
 		search:     search,
 		depthLimit: depthLimit,
+		hooks:      hooks,
 	}
 }
 
 func (i *Iterative) Launch(ctx context.Context, b *board.Board, opt Options) (Handle, <-chan PV) {
 	if i.depthLimit > 0 && opt.DepthLimit == nil {
 		opt.DepthLimit = &i.depthLimit
+	}
+
+	for _, fn := range i.hooks {
+		fn(ctx, b)
 	}
 
 	out := make(chan PV, 1)
