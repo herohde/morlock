@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ply = flag.Int("ply", 3, "Search depth limit (zero if no limit)")
+	ply = flag.Int("ply", 1, "Search depth limit (zero if no limit)")
 )
 
 func init() {

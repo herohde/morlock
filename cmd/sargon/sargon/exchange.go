@@ -1,9 +1,88 @@
 package sargon
 
 import (
+	"fmt"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
+	"sort"
 )
+
+// Exchange computes the exchange value of the square, if populated.
+func Exchange(pos *board.Position, pins Pins, side board.Color, sq board.Square) eval.Pawns {
+	cur, piece, ok := pos.Square(sq)
+	if !ok || piece == board.King {
+		return 0 // empty square or King: no exchange value
+	}
+
+	all := FindAttackers(pos, pins, sq)
+	defenders := findSide(all, cur)
+	attackers := findSide(all, cur.Opponent())
+
+	var residue eval.Pawns // gain of exchange from cur.Opponent point-of-view
+
+	defender := eval.NominalValue(piece)
+	for len(attackers) > 0 {
+		attacker := attackers[0]
+		attackers = attackers[1:]
+
+		// Opposing side will attack, if undefended or not a loss.
+
+		willAttack := len(defenders) == 0 || val(attacker) <= defender
+		willAttack = willAttack || (len(attackers) > 0 && val(attacker)+val(attackers[0]) <= defender+val(defenders[0]))
+		if !willAttack {
+			break
+		}
+
+		residue += defender
+		defender = val(attacker)
+
+		// Swap roles
+
+		attackers, defenders = defenders, attackers
+		residue = -residue
+		cur = cur.Opponent()
+	}
+
+	if cur == side {
+		return -residue
+	}
+	return residue
+}
+
+func findSide(attackers []*Attacker, turn board.Color) []*Attacker {
+	// (1) Project side
+
+	var ret []*Attacker
+	for _, att := range attackers {
+		if att.Piece.Color == turn {
+			ret = append(ret, att)
+		}
+	}
+
+	// (2) Flatten into attack list in value order, while respecting the Behind relation.
+
+	sort.Slice(ret, byValue(ret))
+	for i := 0; i < len(ret); i++ {
+		att := ret[i]
+		if att.Behind == nil {
+			continue
+		}
+
+		ret = append(ret, att.Behind)
+		sort.Slice(ret[i+1:], byValue(ret[i+1:]))
+	}
+	return ret
+}
+
+func byValue(list []*Attacker) func(i, j int) bool {
+	return func(i, j int) bool {
+		return val(list[i]) < val(list[j])
+	}
+}
+
+func val(att *Attacker) eval.Pawns {
+	return eval.NominalValue(att.Piece.Piece)
+}
 
 // Attacker represents a non-pinned attacker of some square. The attacker
 // may potentially have others stacked behind it. For example, if we have
@@ -12,6 +91,10 @@ import (
 type Attacker struct {
 	Piece  board.Placement
 	Behind *Attacker
+}
+
+func (a *Attacker) String() string {
+	return fmt.Sprintf("%v|%v", a.Piece, a.Behind)
 }
 
 // NumAttackers returns the number of attackers for the given side.
@@ -76,6 +159,9 @@ func addAttackerStack(pos *board.Position, r board.RotatedBitboard, pins Pins, s
 			Color:  side,
 			Square: from,
 		},
+	}
+	if piece == board.King {
+		return ret, true // nobody can be behind the King in an exchange
 	}
 
 	next := r.Xor(from)

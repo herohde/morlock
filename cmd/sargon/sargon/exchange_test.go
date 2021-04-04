@@ -4,10 +4,39 @@ import (
 	"github.com/herohde/morlock/cmd/sargon/sargon"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+func TestExchange(t *testing.T) {
+	tests := []struct {
+		fen      string
+		sq       board.Square
+		expected eval.Pawns
+	}{
+		{fen.Initial, board.E2, 0},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.C3, -2},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.E6, 0},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.D5, 0},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.G2, 0},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.A6, 3},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", board.D7, 0},
+		{"kr4QR/pr6/2B5/8/8/8/8/7K w - - 0 1", board.B7, 2},
+		{"kr4QR/pr6/2B5/8/8/8/8/7K w - - 0 1", board.B8, 5},
+		{"kr4QR/pr6/2B5/8/8/8/8/7K b - - 0 1", board.B8, -5},
+	}
+
+	for _, tt := range tests {
+		b, err := fen.NewBoard(tt.fen)
+		require.NoError(t, err)
+
+		pins := sargon.FindKingQueenPins(b.Position())
+		actual := sargon.Exchange(b.Position(), pins, b.Turn(), tt.sq)
+		assert.Equal(t, actual, tt.expected, "failed at %v: %v", tt.sq, b.Position())
+	}
+}
 
 var empty sargon.Pins = map[board.Square][]board.Square{}
 
@@ -57,6 +86,11 @@ func TestFindAttackers(t *testing.T) {
 			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
 			board.D7,
 			"----X---/----X---/-X---X--/----X---/--------/--------/--------/--------",
+		},
+		{
+			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			board.D5,
+			"--------/--------/-X--XX--/--------/----X---/--X--X--/--------/--------",
 		},
 		{
 			"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",

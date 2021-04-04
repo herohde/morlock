@@ -8,12 +8,14 @@ import (
 
 // Points implements the POINTS evaluation.
 type Points struct {
+	ply0         board.Color
 	mtrl0, brdc0 eval.Pawns
 }
 
 func (p *Points) Reset(ctx context.Context, b *board.Board) {
 	pins := FindKingQueenPins(b.Position())
 
+	p.ply0 = b.Turn()
 	p.mtrl0 = Material(ctx, b, pins, 0)
 	p.brdc0 = BoardControl(ctx, b, pins, 0)
 }
@@ -21,8 +23,13 @@ func (p *Points) Reset(ctx context.Context, b *board.Board) {
 func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pins := FindKingQueenPins(b.Position())
 
-	mtrl := Material(ctx, b, pins, p.mtrl0)
-	brdc := BoardControl(ctx, b, pins, p.brdc0)
+	mtrl0, brdc0 := p.mtrl0, p.brdc0
+	if b.Turn() != p.ply0 {
+		mtrl0, brdc0 = -mtrl0, -brdc0
+	}
+
+	mtrl := Material(ctx, b, pins, mtrl0)
+	brdc := BoardControl(ctx, b, pins, brdc0)
 	return mtrl*4 + brdc
 }
 
@@ -72,10 +79,31 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 
 // Quiescece +1ply if in check.
 
-// Material implements the MTRL heuristic limited to +/- 30 relative to its ply0 value.
+// Material implements the MTRL heuristic, limited to +/- 30 relative to its ply0 value.
 func Material(ctx context.Context, b *board.Board, pins Pins, ply0 eval.Pawns) eval.Pawns {
+	pos := b.Position()
+	turn := b.Turn()
+
 	mtrl := eval.Material{}.Evaluate(ctx, b)
 
+	var ptsl, ptsw1, ptsw2 eval.Pawns
+	for sq := board.ZeroSquare; sq < board.NumSquares; sq++ {
+		v := Exchange(pos, pins, turn.Opponent(), sq)
+		switch {
+		case v < ptsl:
+			ptsl = v
+		case ptsw1 < v:
+			ptsw1, ptsw2 = v, ptsw1
+		case ptsw2 < v:
+			ptsw2 = v
+		}
+	}
+
+	if last, ok := b.LastMove(); ok && pos.IsAttacked(turn.Opponent(), last.To) {
+		// Use PTSW2 if moving piece is subject to capture. Assumed unguarded win.
+		ptsw1, ptsw2 = ptsw2, 0
+	}
+	mtrl -= ptsl + (3*ptsw1)/4
 	return eval.Limit(mtrl-ply0, 30)
 }
 
