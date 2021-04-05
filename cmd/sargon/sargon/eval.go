@@ -16,8 +16,8 @@ func (p *Points) Reset(ctx context.Context, b *board.Board) {
 	pins := FindKingQueenPins(b.Position())
 
 	p.ply0 = b.Turn()
-	p.mtrl0 = Material(ctx, b, pins, 0)
-	p.brdc0 = BoardControl(ctx, b, pins, 0)
+	p.mtrl0 = Material(ctx, b, pins)
+	p.brdc0 = BoardControl(ctx, b, pins)
 }
 
 func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
@@ -28,9 +28,9 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 		mtrl0, brdc0 = -mtrl0, -brdc0
 	}
 
-	mtrl := Material(ctx, b, pins, mtrl0)
-	brdc := BoardControl(ctx, b, pins, brdc0)
-	return mtrl*4 + brdc
+	mtrl := Material(ctx, b, pins)
+	brdc := BoardControl(ctx, b, pins)
+	return eval.Limit(mtrl-mtrl0, 30)*4 + eval.Limit(brdc-brdc0, 6)
 }
 
 // Material: 1,3,3,5,9,10
@@ -79,8 +79,8 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 
 // Quiescece +1ply if in check.
 
-// Material implements the MTRL heuristic, limited to +/- 30 relative to its ply0 value.
-func Material(ctx context.Context, b *board.Board, pins Pins, ply0 eval.Pawns) eval.Pawns {
+// Material implements the MTRL heuristic without limit.
+func Material(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
 	pos := b.Position()
 	turn := b.Turn()
 
@@ -104,13 +104,12 @@ func Material(ctx context.Context, b *board.Board, pins Pins, ply0 eval.Pawns) e
 		ptsw1, ptsw2 = ptsw2, 0
 	}
 	mtrl -= ptsl + (3*ptsw1)/4
-	return eval.Limit(mtrl-ply0, 30)
+	return mtrl
 }
 
-// BoardControl implements the BRDC heuristic limited to +/- 6 relative to its ply0 value.
-func BoardControl(ctx context.Context, b *board.Board, pins Pins, ply0 eval.Pawns) eval.Pawns {
-	brdc := Development(ctx, b) + Mobility(ctx, b, pins)
-	return eval.Limit(brdc-ply0, 6)
+// BoardControl implements the BRDC heuristic without limit.
+func BoardControl(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
+	return Development(ctx, b) + Mobility(ctx, b, pins)
 }
 
 // Mobility implements the development aspects of the BRDC heuristic, without limit.

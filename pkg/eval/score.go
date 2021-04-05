@@ -23,13 +23,11 @@ func (p Pawns) String() string {
 
 // Limit crops the value to +/- limit.
 func Limit(pawns, limit Pawns) Pawns {
-	low, high := pawns-limit, pawns+limit
-
 	switch {
-	case pawns < low:
-		return low
-	case high < pawns:
-		return high
+	case pawns < -limit:
+		return -limit
+	case limit < pawns:
+		return limit
 	default:
 		return pawns
 	}
