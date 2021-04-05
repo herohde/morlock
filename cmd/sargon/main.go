@@ -45,6 +45,7 @@ func main() {
 
 		points := &sargon.Points{}
 		s := search.NewIterative(search.AlphaBeta{
+			Pick: search.IsNotUnderPromotion,
 			Eval: sargon.OnePlyIfChecked{
 				Eval: points,
 			},

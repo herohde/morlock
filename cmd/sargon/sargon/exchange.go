@@ -201,6 +201,12 @@ func FindKingQueenPins(pos *board.Position) Pins {
 
 	ret := map[board.Square][]board.Square{}
 	for _, pin := range pins {
+		_, att, _ := pos.Square(pin.Attacker)
+		_, def, _ := pos.Square(pin.Target)
+		if att == def {
+			continue // omit: Q on Q pins.
+		}
+
 		ret[pin.Pinned] = append(ret[pin.Pinned], pin.Attacker)
 	}
 	return ret

@@ -6,6 +6,10 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 4. apr 2021; Version 0.87 ###
+  - Added Sargon. Descriptions differ, so it seems to have evolved. Prevented under-promotions.
+  - SARGON is running as "sargon-1ply" and "sargon-3ply" on lichess.org. Running on "red" Pi.
+
 ### 21. mar 2021; Version 0.86 ###
   - Revamped Score w/ float32 heuristic; added MateInX. TUROCHAMP didn't pick easy mates.
   - Used MVV/LVA in search. Reverted to alpha-beta, for now, as null-window is trickier with float eval.

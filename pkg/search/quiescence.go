@@ -7,10 +7,6 @@ import (
 	"sort"
 )
 
-// Selection defines move selection. It is required by quiescence search, but optional
-// for full search. Selection turns true if the move just made should be explored.
-type Selection func(ctx context.Context, move board.Move, b *board.Board) bool
-
 // Quiescence implements a configurable alpha-beta QuietSearch.
 type Quiescence struct {
 	Pick Selection
@@ -80,18 +76,4 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 		return eval.ZeroScore
 	}
 	return alpha
-}
-
-// IsQuickGain is a move selection for immediate material gain: promotions and captures.
-func IsQuickGain(ctx context.Context, m board.Move, b *board.Board) bool {
-	explore := m.IsPromotion()
-	if m.IsCapture() {
-		if eval.NominalValue(m.Piece) < eval.NominalValue(m.Capture) {
-			explore = true
-		}
-		if !b.Position().IsAttacked(b.Turn().Opponent(), m.To) {
-			explore = true
-		}
-	}
-	return explore
 }

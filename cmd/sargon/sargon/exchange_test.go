@@ -52,9 +52,7 @@ func TestFindKingQueenPins(t *testing.T) {
 			board.B5: {board.H5},
 		}},
 		{"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", empty},
-		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", map[board.Square][]board.Square{
-			board.D7: {board.D8}, // Q on Q pin
-		}},
+		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", empty}, // no Q on Q
 	}
 
 	for _, tt := range tests {

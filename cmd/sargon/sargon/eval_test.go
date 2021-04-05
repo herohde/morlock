@@ -10,6 +10,39 @@ import (
 	"testing"
 )
 
+func TestPoints(t *testing.T) {
+	tests := []struct {
+		fen      string
+		moves    []string
+		expected eval.Pawns
+	}{
+		{fen.Initial, []string{}, 0},
+		{"kr4QR/pr6/2B5/8/8/8/8/7K w - - 0 1", []string{}, 68},
+		{"kr4QR/pr6/2B5/8/8/8/8/7K b - - 0 1", []string{}, -59},
+		// In game37, Qh1 seems broken after the below position. Maybe when ply0 is different color?
+		{"r7/2p1k1pp/Q6n/p2qPp2/3p4/N5P1/PPP1PP1P/3R1RK1 w - - 7 18", []string{"a6b5"}, -20},
+		{"r7/2p1k1pp/7n/pQ1qPp2/3p4/N5P1/PPP1PP1P/3R1RK1 b - - 8 18", []string{}, -47},
+		{"r7/2p1k1pp/Q6n/p2qPp2/3p4/N5P1/PPP1PP1P/3R1RK1 w - - 7 18", []string{"a6b5", "d5h1"}, 67},
+		{"r7/2p1k1pp/Q6n/p2qPp2/3p4/N5P1/PPP1PP1P/3R1RK1 w - - 7 18", []string{"a6b5", "d5b5"}, 29}, // <- clearly better
+		// In game38, f5c2 seems broken. Bishop is moving into a losing exchange.
+		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5"}, -13},
+		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5"}, 0},
+		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5", "f5c2"}, 12},
+		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5", "d6c6"}, 9},
+		// In game41, Ne3 seems broken.
+		{"rnb1k2r/ppppbppp/3q4/8/2BBP1n1/5N1P/PPP2PP1/RN1Q1RK1 b kq - 0 8", []string{"g4e3"}, -5},
+		{"rnb1k2r/ppppbppp/3q4/8/2BBP1n1/5N1P/PPP2PP1/RN1Q1RK1 b kq - 0 8", []string{"g4h6"}, 0},
+	}
+
+	for _, tt := range tests {
+		b, err := fen.NewBoard(tt.fen, tt.moves...)
+		require.NoError(t, err)
+
+		actual := (&sargon.Points{}).Evaluate(context.Background(), b)
+		assert.Equal(t, actual, tt.expected, "failed: %v", b.Position())
+	}
+}
+
 func TestMaterial(t *testing.T) {
 	tests := []struct {
 		fen      string
@@ -29,6 +62,9 @@ func TestMaterial(t *testing.T) {
 		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5"}, -3.75},
 		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5", "f5c2"}, 6},
 		{"rn2kbnr/ppp1pp2/3q3p/3p1bp1/3P4/2N2NB1/PPP1PPPP/R2QKB1R b KQkq - 1 6", []string{"e7e5", "g3e5", "d6c6"}, 5},
+		// In game41, Ne3 seems broken.
+		{"rnb1k2r/ppppbppp/3q4/8/2BBP1n1/5N1P/PPP2PP1/RN1Q1RK1 b kq - 0 8", []string{"g4e3"}, 0.75},
+		{"rnb1k2r/ppppbppp/3q4/8/2BBP1n1/5N1P/PPP2PP1/RN1Q1RK1 b kq - 0 8", []string{"g4h6"}, 1},
 	}
 
 	for _, tt := range tests {
@@ -71,7 +107,7 @@ func TestMobility(t *testing.T) {
 		{fen.Initial, 0},
 		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 8},
 		{"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", -1},
-		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 6},
+		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 7},
 		{"k7/8/8/8/8/8/8/6K1 w - - 0 1", 2},
 	}
 

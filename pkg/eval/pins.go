@@ -3,7 +3,7 @@ package eval
 import "github.com/herohde/morlock/pkg/board"
 
 // Pin represents a pinned piece. A pinned piece cannot attack anything but
-// the attacker itself.
+// the attacker itself, if the relative value of attacker/target is high enough.
 type Pin struct {
 	Attacker, Pinned, Target board.Square
 }

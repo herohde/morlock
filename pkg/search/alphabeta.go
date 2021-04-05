@@ -31,11 +31,16 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Alpha–beta_pruning.
 type AlphaBeta struct {
+	Pick Selection
 	Eval QuietSearch
 }
 
 func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
-	run := &runAlphaBeta{eval: p.Eval, b: b, quit: quit}
+	run := &runAlphaBeta{pick: p.Pick, eval: p.Eval, b: b, quit: quit}
+	if run.pick == nil {
+		run.pick = IsAnyMove
+	}
+
 	score, moves := run.search(ctx, depth, eval.NegInfScore, eval.InfScore)
 	if IsClosed(quit) {
 		return 0, eval.ZeroScore, nil, ErrHalted
@@ -44,6 +49,7 @@ func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <
 }
 
 type runAlphaBeta struct {
+	pick  Selection
 	eval  QuietSearch
 	b     *board.Board
 	nodes uint64
@@ -74,19 +80,24 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 	sort.Sort(board.ByMVVLVA(moves))
 
 	for _, move := range moves {
-		if m.b.PushMove(move) {
-			score, rem := m.search(ctx, depth-1, beta.Negate(), alpha.Negate())
-			m.b.PopMove()
+		if !m.b.PushMove(move) {
+			continue
+		}
 
-			hasLegalMove = true
+		if m.pick(ctx, move, m.b) {
+			score, rem := m.search(ctx, depth-1, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			if alpha.Less(score) {
 				alpha = score
 				pv = append([]board.Move{move}, rem...)
 			}
-			if alpha == beta || beta.Less(alpha) {
-				break // cutoff
-			}
+		}
+
+		m.b.PopMove()
+		hasLegalMove = true
+
+		if alpha == beta || beta.Less(alpha) {
+			break // cutoff
 		}
 	}
 
