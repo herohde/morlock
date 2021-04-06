@@ -1,0 +1,22 @@
+[Event "?"]
+[Site "?"]
+[Date "2021.04.05"]
+[Round "?"]
+[White "SARGON 3ply"]
+[Black "Henning"]
+[Result "1-0"]
+[ECO "B23"]
+[GameDuration "00:01:16"]
+[GameEndTime "2021-04-05T22:52:45.207 PDT"]
+[GameStartTime "2021-04-05T22:51:28.278 PDT"]
+[Opening "Sicilian"]
+[PlyCount "19"]
+[TimeControl "40/300"]
+[Variation "Closed"]
+
+1. e4 {0s} c5 {4.5s} 2. Nc3 {-2.00/4 0.36s} e5 {1.9s} 3. Qh5 {+1.00/4 0.59s}
+Qf6 {14s} 4. Nd5 {+3.00/4 0.84s} Qd6 {26s} 5. d4 {-5.00/4 0.91s} g6 {11s}
+6. Qxe5+ {-5.00/4 0.21s} Qxe5 {2.8s} 7. dxe5 {+9.00/4 0.14s} Na6 {8.1s}
+8. Bxa6 {+10.00/4 0.11s} bxa6 {1.6s} 9. Bg5 {+13.00/4 0.41s} Bb7 {3.3s}
+10. Nc7# {+M1/2 0.007s, White mates} 1-0
+

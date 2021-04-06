@@ -8,7 +8,8 @@ import (
 type ScoreType int8
 
 const (
-	Heuristic ScoreType = iota
+	Invalid ScoreType = iota
+	Heuristic
 	MateInX
 	Inf    // Won position (= opponent checkmate)
 	NegInf // Lost position (= in checkmate)
@@ -44,9 +45,10 @@ type Score struct {
 }
 
 var (
-	ZeroScore   = Score{Type: Heuristic}
-	InfScore    = Score{Type: Inf}
-	NegInfScore = Score{Type: NegInf}
+	InvalidScore = Score{Type: Invalid}
+	ZeroScore    = Score{Type: Heuristic}
+	InfScore     = Score{Type: Inf}
+	NegInfScore  = Score{Type: NegInf}
 )
 
 // HeuristicScore returns a Heuristic score with the given evaluation.
@@ -57,6 +59,10 @@ func HeuristicScore(pawns Pawns) Score {
 // MateInXScore returns a MateInX score with the given evaluation.
 func MateInXScore(mate int8) Score {
 	return Score{Type: MateInX, Mate: mate}
+}
+
+func (s Score) IsInvalid() bool {
+	return s.Type == Invalid
 }
 
 func (s Score) IsHeuristic() bool {
@@ -103,7 +109,7 @@ func (s Score) Negate() Score {
 	case NegInf:
 		return InfScore
 	default:
-		panic("invalid score")
+		return InvalidScore
 	}
 }
 
@@ -139,7 +145,7 @@ func (s Score) Less(o Score) bool {
 		}
 	}
 
-	panic("invalid score")
+	return false
 }
 
 func (s Score) String() string {

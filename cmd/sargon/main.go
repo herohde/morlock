@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ply = flag.Int("ply", 1, "Search depth limit (zero if no limit)")
+	ply = flag.Int("ply", 4, "Search depth limit (zero if no limit)")
 )
 
 func init() {
@@ -46,7 +46,7 @@ func main() {
 		points := &sargon.Points{}
 		s := search.NewIterative(search.AlphaBeta{
 			Pick: search.IsNotUnderPromotion,
-			Eval: sargon.OnePlyIfChecked{
+			Eval: search.ZeroPly{
 				Eval: points,
 			},
 		}, *ply, points.Reset)

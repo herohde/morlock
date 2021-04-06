@@ -31,8 +31,9 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Alpha–beta_pruning.
 type AlphaBeta struct {
-	Pick Selection
-	Eval QuietSearch
+	Pick        Selection
+	Eval        QuietSearch
+	Alpha, Beta eval.Score
 }
 
 func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
@@ -40,10 +41,17 @@ func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <
 	if run.pick == nil {
 		run.pick = IsAnyMove
 	}
+	low, high := eval.NegInfScore, eval.InfScore
+	if !p.Alpha.IsInvalid() {
+		low = p.Alpha
+	}
+	if !p.Beta.IsInvalid() {
+		high = p.Beta
+	}
 
-	score, moves := run.search(ctx, depth, eval.NegInfScore, eval.InfScore)
+	score, moves := run.search(ctx, depth, low, high)
 	if IsClosed(quit) {
-		return 0, eval.ZeroScore, nil, ErrHalted
+		return 0, eval.InvalidScore, nil, ErrHalted
 	}
 	return run.nodes, score, moves, nil
 }
@@ -60,7 +68,7 @@ type runAlphaBeta struct {
 // search returns the positive score for the color.
 func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.Score) (eval.Score, []board.Move) {
 	if IsClosed(m.quit) {
-		return eval.ZeroScore, nil
+		return eval.InvalidScore, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
 		return eval.ZeroScore, nil

@@ -17,6 +17,12 @@ func (q OnePlyIfChecked) QuietSearch(ctx context.Context, b *board.Board, alpha,
 		return 1, eval.HeuristicScore(q.Eval.Evaluate(ctx, b))
 	}
 
-	nodes, score, _, _ := search.Minimax{Eval: q.Eval}.Search(ctx, b, 1, quit)
+	s := search.AlphaBeta{
+		Eval:  search.ZeroPly{Eval: q.Eval},
+		Alpha: alpha,
+		Beta:  beta,
+	}
+
+	nodes, score, _, _ := s.Search(ctx, b, 1, quit)
 	return nodes, score
 }
