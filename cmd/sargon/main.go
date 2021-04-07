@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ply = flag.Int("ply", 4, "Search depth limit (zero if no limit)")
+	ply = flag.Int("ply", 0, "Search depth limit (zero if no limit)")
 )
 
 func init() {
@@ -46,10 +46,10 @@ func main() {
 		points := &sargon.Points{}
 		s := search.NewIterative(search.AlphaBeta{
 			Pick: search.IsNotUnderPromotion,
-			Eval: search.ZeroPly{
+			Eval: sargon.OnePlyIfChecked{
 				Eval: points,
 			},
-		}, *ply, points.Reset)
+		}, *ply)
 
 		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s)
 

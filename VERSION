@@ -6,6 +6,12 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 6. apr 2021; Version 0.88 ###
+  - Changed SARGON to use absolute disjoint evaluations. It was playing oddly on lichess, especially "sargon-4ply".
+
+ TODO:
+  - Improve search efficiency: sargon-4ply moves slowly on a Pi 3B.
+
 ### 4. apr 2021; Version 0.87 ###
   - Added Sargon. Descriptions differ, so it seems to have evolved. Prevented under-promotions.
   - SARGON is running as "sargon-1ply" and "sargon-3ply" on lichess.org. Running on "red" Pi.

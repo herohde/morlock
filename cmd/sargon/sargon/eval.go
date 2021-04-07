@@ -6,31 +6,16 @@ import (
 	"github.com/herohde/morlock/pkg/eval"
 )
 
-// Points implements the POINTS evaluation.
-type Points struct {
-	ply0         board.Color
-	mtrl0, brdc0 eval.Pawns
-}
-
-func (p *Points) Reset(ctx context.Context, b *board.Board) {
-	pins := FindKingQueenPins(b.Position())
-
-	p.ply0 = b.Turn()
-	p.mtrl0 = Material(ctx, b, pins)
-	p.brdc0 = BoardControl(ctx, b, pins)
-}
+// Points implements the POINTS evaluation. It uses the full score for material and board control, given we do not
+// have a representation size limit. As long as they are disjoint, they should reflect the original scheme.
+type Points struct{}
 
 func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pins := FindKingQueenPins(b.Position())
 
-	mtrl0, brdc0 := p.mtrl0, p.brdc0
-	if b.Turn() != p.ply0 {
-		mtrl0, brdc0 = -mtrl0, -brdc0
-	}
-
 	mtrl := Material(ctx, b, pins)
 	brdc := BoardControl(ctx, b, pins)
-	return eval.Limit(mtrl-mtrl0, 30)*4 + eval.Limit(brdc-brdc0, 6)
+	return mtrl*4 + brdc/100
 }
 
 // Material: 1,3,3,5,9,10

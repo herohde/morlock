@@ -1,0 +1,27 @@
+[Event "?"]
+[Site "?"]
+[Date "2021.04.06"]
+[Round "?"]
+[White "Henning"]
+[Black "SARGON 3ply"]
+[Result "0-1"]
+[ECO "D00"]
+[GameDuration "00:05:43"]
+[GameEndTime "2021-04-06T22:18:33.900 PDT"]
+[GameStartTime "2021-04-06T22:12:50.590 PDT"]
+[Opening "Queen's pawn game"]
+[PlyCount "46"]
+[TimeControl "40/300"]
+
+1. d4 d5 {0s} 2. e3 {1.6s} Qd6 {+0.05/5 6.7s} 3. Bd2 {14s} e5 {+0.08/5 9.0s}
+4. Nf3 {9.8s} exd4 {-0.05/6 11s} 5. Nxd4 {2.1s} c5 {+0.03/4 11s} 6. Nb5 {6.7s}
+Qb6 {+0.20/5 8.5s} 7. N1c3 {8.6s} Nf6 {+0.08/5 11s} 8. Qf3 {6.8s}
+c4 {+3.89/5 6.3s} 9. Nxd5 {15s} Nxd5 {-4.04/6 4.7s} 10. Qxd5 {2.6s}
+Be6 {+3.96/5 11s} 11. Qe5 {45s} Nc6 {+2.95/5 4.8s} 12. Nd6+ {8.7s}
+Bxd6 {+7.17/7 8.3s} 13. Qxd6 {5.6s} Qxb2 {+4.10/6 5.7s} 14. Rd1 {8.7s}
+Rd8 {+9.14/5 5.1s} 15. Qg3 {12s} c3 {+9.10/5 4.9s} 16. Qxg7 {8.2s}
+cxd2+ {+44.15/8 11s} 17. Rxd2 {2.1s} Qxg7 {+44.22/7 9.8s} 18. Bd3 {7.3s}
+Qxg2 {+52.20/5 4.4s} 19. Rf1 {1.8s} Qxh2 {+52.24/5 5.0s} 20. Rh1 {9.1s}
+Qxh1+ {+76.26/6 11s} 21. Ke2 {2.0s} Bh3 {+88.32/5 4.8s} 22. Bb5 {7.3s}
+Bf1+ {+M3/4 0.078s} 23. Ke1 {2.9s} Bxb5# {+M1/2 0.009s, Black mates} 0-1
+
