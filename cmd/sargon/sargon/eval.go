@@ -18,35 +18,13 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	return mtrl*4 + brdc/100
 }
 
-// Material: 1,3,3,5,9,10
-
-// Mobility : WHITE moves squares - BLACK move squares.
-
-// Pins? Exchange. 2x victim.
-// Pins for K+Q
-
-// Move list: has moved. Not moved.
-
-// Points: MTRL * 4 + BRDC
-//  - MTRL: MATERIAL (XCHNG w/ pins for K/Q) Material difference. max=30 from ply0
-//  - BRDC: BOARD CONTROL:   #Sq target move difference max=6 from ply0
-//       * PAWN: no bonus
-//       * KNIGHT/BISHOP -2/+2 if not moved.
-//       * ROOK/QUEEN -2/+2 if MOVENO < 7 and _moved_.
-//       * KING +6 if castle, -6 if opp.; -2 / +2 opp if moved, but not castled
-//     + ATTACKERS - DEFENDERS for each square.
-
-// PIN: pieces pinned to K or Q w/ source of pin. Can attack source.
-// ATTACK: attack lists w/ transparent attackers and w/o pinned pieces (except if source).
-
+// Notes
+//
 // XCHNG: exchange value.
 //  initial defender x2 (<-- not in BYTE article), but perhaps only to allow RxB if defended. Not QxP or QxB. Seems
 //  like a trick to cutoff futile exchanges that we can never bounce back from.
 //  Use:  3/4 for PTSW2.
-
-// BASELINE: POINTS with 0 as ply0 value. So still limited to +/- 30/6.
-
-// POINTS:
+//
 // if LOSS
 //   -0.5
 //   Save greatest loss to PTSL
@@ -54,20 +32,16 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 // if WIN:
 //   - Save greatest 2 wins as PTSW1, PTSW2.
 //   - Use PTSW2 if moving piece was lost.
-
+//
 //  PSTL:  if >0 then -1
 //   - adjustment: (PSTW1 + PTSW2 -1)/2 - PSTL.   (omit x-1/2 if PTSW2 == 0)
-
-// Q: Moving piece lost flag? Prevent undefended exchange.
-
-// Does not under-promote.
-
-// Quiescece +1ply if in check.
 
 // Material implements the MTRL heuristic without limit.
 func Material(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
 	pos := b.Position()
 	turn := b.Turn()
+
+	// Material uses: 1,3,3,5,9,10
 
 	mtrl := eval.Material{}.Evaluate(ctx, b)
 

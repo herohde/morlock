@@ -26,10 +26,10 @@ type Board struct {
 	zt          *ZobristTable
 	repetitions map[ZobristHash]int
 
-	fullmoves int
-	turn      Color
-	result    Result
-	current   *node
+	ply, moves int
+	turn       Color
+	result     Result
+	current    *node
 }
 
 func NewBoard(zt *ZobristTable, pos *Position, turn Color, noprogress, fullmoves int) *Board {
@@ -46,7 +46,8 @@ func NewBoard(zt *ZobristTable, pos *Position, turn Color, noprogress, fullmoves
 	return &Board{
 		zt:          zt,
 		repetitions: repetitions,
-		fullmoves:   fullmoves,
+		ply:         1,
+		moves:       fullmoves,
 		turn:        turn,
 		current:     current,
 	}
@@ -58,7 +59,8 @@ func (b *Board) Fork() *Board {
 	fork := &Board{
 		zt:          b.zt,
 		repetitions: map[ZobristHash]int{},
-		fullmoves:   b.fullmoves,
+		ply:         b.ply,
+		moves:       b.moves,
 		turn:        b.turn,
 		result:      b.result,
 		current: &node{
@@ -75,22 +77,39 @@ func (b *Board) Fork() *Board {
 	return fork
 }
 
+// Position returns the current position.
 func (b *Board) Position() *Position {
 	return b.current.pos
 }
 
+// Turn returns the color whose turn it is to move.
 func (b *Board) Turn() Color {
 	return b.turn
 }
 
+// Hash returns the Zobrist hashcode for the current position.
+func (b *Board) Hash() ZobristHash {
+	return b.current.hash
+}
+
+// NoProgress returns the ply count since last irreversible move, i.e, pawn move, castling or capture. Used
+// solely to track the 50 move draw rule.
 func (b *Board) NoProgress() int {
 	return b.current.noprogress
 }
 
-func (b *Board) FullMoves() int {
-	return b.fullmoves
+// Ply returns the number of half-moves since the beginning of the game. It is equal to teh number of positions
+// in the game history.
+func (b *Board) Ply() int {
+	return b.ply
 }
 
+// FullMoves returns the number of full moves. May be larger than game history suggests for FromPosition games.
+func (b *Board) FullMoves() int {
+	return b.moves
+}
+
+// Result returns the game result.
 func (b *Board) Result() Result {
 	return b.result
 }
@@ -122,8 +141,9 @@ func (b *Board) PushMove(m Move) bool {
 
 	b.turn = b.turn.Opponent()
 	b.repetitions[b.current.hash]++
+	b.ply++
 	if b.turn == White {
-		b.fullmoves++
+		b.moves++
 	}
 
 	// (3) Determine if draw condition applies.
@@ -167,8 +187,9 @@ func (b *Board) PopMove() (Move, bool) {
 	b.turn = b.turn.Opponent()
 	b.repetitions[b.current.hash]--
 	b.result = Result{Outcome: Undecided} // a legal move was made, so not terminal
+	b.ply--
 	if b.turn == Black {
-		b.fullmoves--
+		b.moves--
 	}
 
 	// (2) Pop current node.
@@ -256,7 +277,7 @@ func (b *Board) HasMoved(limit int) Bitboard {
 }
 
 func (b *Board) String() string {
-	return fmt.Sprintf("board{pos=%v, turn=%v, hash=%x (%v) noprogress=%v, fullmoves=%v, result=%v}", b.current.pos, b.turn, b.current.hash, b.repetitions[b.current.hash], b.current.noprogress, b.fullmoves, b.result)
+	return fmt.Sprintf("board{pos=%v, turn=%v, hash=%x (%v) noprogress=%v, ply=%v, moves=%v, result=%v}", b.current.pos, b.turn, b.current.hash, b.repetitions[b.current.hash], b.current.noprogress, b.ply, b.moves, b.result)
 }
 
 func updateNoProgress(old int, m Move) int {

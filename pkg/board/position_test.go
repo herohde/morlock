@@ -314,6 +314,27 @@ func TestPerft1(t *testing.T) {
 	}
 }
 
+func BenchmarkPseudoLegalMoves1(b *testing.B) {
+	pos, _ := fen.NewBoard(fen.Initial)
+	for i := 0; i < b.N; i++ {
+		pos.Position().PseudoLegalMoves(pos.Turn())
+	}
+}
+
+func BenchmarkPseudoLegalMoves2(b *testing.B) {
+	pos, _ := fen.NewBoard("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+	for i := 0; i < b.N; i++ {
+		pos.Position().PseudoLegalMoves(pos.Turn())
+	}
+}
+
+func BenchmarkPseudoLegalMoves3(b *testing.B) {
+	pos, _ := fen.NewBoard("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
+	for i := 0; i < b.N; i++ {
+		pos.Position().PseudoLegalMoves(pos.Turn())
+	}
+}
+
 func filterMoves(ms []board.Move, fn func(move board.Move) bool) []board.Move {
 	var list []board.Move
 	for _, m := range ms {

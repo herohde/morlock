@@ -37,7 +37,7 @@ func Limit(pawns, limit Pawns) Pawns {
 // Score is signed position score in "pawns", unless decided or mate-in-X. Positive favors
 // the side to move. If all pawns become queens and the opponent has only the king left,
 // the standard material advantage score is: 9*8 (p) + 9 (q) + 2*5 (r) + 2*3 (k) + 2*3 (b)
-// = 103. The score can be arbitrary, but is reported as centi-pawns to humans.
+// = 103. The score can be arbitrary, but is reported as centi-pawns to humans. 64bits.
 type Score struct {
 	Type  ScoreType
 	Mate  int8 // Non-zero ply to forced mate. Negative if being mated.
