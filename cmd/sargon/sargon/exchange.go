@@ -14,9 +14,8 @@ func Exchange(pos *board.Position, pins Pins, side board.Color, sq board.Square)
 		return 0 // empty square or King: no exchange value
 	}
 
-	all := FindAttackers(pos, pins, sq)
-	defenders := findSide(all, cur)
-	attackers := findSide(all, cur.Opponent())
+	defenders := findSide(FindAttackers(pos, pins, sq, cur), cur)
+	attackers := findSide(FindAttackers(pos, pins, sq, cur.Opponent()), cur.Opponent())
 
 	var residue eval.Pawns // gain of exchange from cur.Opponent point-of-view
 
@@ -97,13 +96,10 @@ func (a *Attacker) String() string {
 	return fmt.Sprintf("%v|%v", a.Piece, a.Behind)
 }
 
-// NumAttackers returns the number of attackers for the given side.
-func NumAttackers(attackers []*Attacker, turn board.Color) int {
+// NumAttackers returns the number of attackers for the given side, incl. Behind attackers.
+func NumAttackers(attackers []*Attacker) int {
 	count := 0
 	for _, att := range attackers {
-		if att.Piece.Color != turn {
-			continue
-		}
 		for att != nil {
 			count++
 			att = att.Behind
@@ -112,36 +108,32 @@ func NumAttackers(attackers []*Attacker, turn board.Color) int {
 	return count
 }
 
-// FindAttackers returns all direct and indirect attackers to a given square.
-func FindAttackers(pos *board.Position, pins Pins, sq board.Square) []*Attacker {
+// FindAttackers returns all direct and indirect attackers of the given side to a given square.
+func FindAttackers(pos *board.Position, pins Pins, sq board.Square, side board.Color) []*Attacker {
 	var ret []*Attacker
 	for _, piece := range board.KingQueenRookKnightBishop {
 		attackboard := board.Attackboard(pos.Rotated(), sq, piece)
 
-		for side := board.ZeroColor; side < board.NumColors; side++ {
-			bb := attackboard & pos.Piece(side, piece)
-			for bb != 0 {
-				from := bb.LastPopSquare()
-				bb ^= board.BitMask(from)
-
-				stack, ok := addAttackerStack(pos, pos.Rotated(), pins, side, piece, from, sq)
-				if ok {
-					ret = append(ret, stack)
-				}
-			}
-		}
-	}
-
-	for side := board.ZeroColor; side < board.NumColors; side++ {
-		bb := board.PawnCaptureboard(side.Opponent(), board.BitMask(sq)) & pos.Piece(side, board.Pawn)
+		bb := attackboard & pos.Piece(side, piece)
 		for bb != 0 {
 			from := bb.LastPopSquare()
 			bb ^= board.BitMask(from)
 
-			stack, ok := addAttackerStack(pos, pos.Rotated(), pins, side, board.Pawn, from, sq)
+			stack, ok := addAttackerStack(pos, pos.Rotated(), pins, side, piece, from, sq)
 			if ok {
 				ret = append(ret, stack)
 			}
+		}
+	}
+
+	bb := board.PawnCaptureboard(side.Opponent(), board.BitMask(sq)) & pos.Piece(side, board.Pawn)
+	for bb != 0 {
+		from := bb.LastPopSquare()
+		bb ^= board.BitMask(from)
+
+		stack, ok := addAttackerStack(pos, pos.Rotated(), pins, side, board.Pawn, from, sq)
+		if ok {
+			ret = append(ret, stack)
 		}
 	}
 

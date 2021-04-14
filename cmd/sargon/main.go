@@ -49,7 +49,7 @@ func main() {
 			Eval: sargon.OnePlyIfChecked{
 				Eval: points,
 			},
-		}, *ply)
+		}, *ply, points.Reset)
 
 		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s)
 

@@ -8,14 +8,32 @@ import (
 
 // Points implements the POINTS evaluation. It uses the full score for material and board control, given we do not
 // have a representation size limit. As long as they are disjoint, they should reflect the original scheme.
-type Points struct{}
+type Points struct {
+	side0 board.Color
+	brdc0 eval.Pawns
+}
+
+func (p *Points) Reset(ctx context.Context, b *board.Board) {
+	pins := FindKingQueenPins(b.Position())
+
+	p.side0 = b.Turn()
+	p.brdc0 = BoardControl(ctx, b, pins)
+}
 
 func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pins := FindKingQueenPins(b.Position())
 
-	mtrl := Material(ctx, b, pins)
+	mtrl, ptschk := Material(ctx, b, pins)
+	if ptschk {
+		return mtrl * 4
+	}
+
 	brdc := BoardControl(ctx, b, pins)
-	return mtrl*4 + brdc/100
+	brdc0 := p.brdc0
+	if b.Turn() != p.side0 {
+		brdc0 = -brdc0
+	}
+	return mtrl*4 + eval.Limit(brdc-p.brdc0, 6)
 }
 
 // Notes
@@ -36,8 +54,8 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 //  PSTL:  if >0 then -1
 //   - adjustment: (PSTW1 + PTSW2 -1)/2 - PSTL.   (omit x-1/2 if PTSW2 == 0)
 
-// Material implements the MTRL heuristic without limit.
-func Material(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
+// Material implements the MTRL heuristic without limit plus the ptschk (= moving into loss).
+func Material(ctx context.Context, b *board.Board, pins Pins) (eval.Pawns, bool) {
 	pos := b.Position()
 	turn := b.Turn()
 
@@ -45,12 +63,23 @@ func Material(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
 
 	mtrl := eval.Material{}.Evaluate(ctx, b)
 
+	last, ok := b.LastMove()
+
 	var ptsl, ptsw1, ptsw2 eval.Pawns
-	for sq := board.ZeroSquare; sq < board.NumSquares; sq++ {
+	ptschk := false
+
+	pieces := b.Position().All()
+	for pieces != 0 {
+		sq := pieces.LastPopSquare()
+		pieces ^= board.BitMask(sq)
+
 		v := Exchange(pos, pins, turn.Opponent(), sq)
 		switch {
 		case v < ptsl:
 			ptsl = v
+			if ok && last.To == sq {
+				ptschk = true // not cleared if later square is greater loss?
+			}
 		case ptsw1 < v:
 			ptsw1, ptsw2 = v, ptsw1
 		case ptsw2 < v:
@@ -58,12 +87,25 @@ func Material(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
 		}
 	}
 
-	if last, ok := b.LastMove(); ok && pos.IsAttacked(turn.Opponent(), last.To) {
-		// Use PTSW2 if moving piece is subject to capture. Assumed unguarded win.
+	if ptschk {
+		// Use PTSW2 if moving piece is moving into losing exchange. Assumed unguarded win.
 		ptsw1, ptsw2 = ptsw2, 0
 	}
-	mtrl -= ptsl + (3*ptsw1)/4
-	return mtrl
+
+	loss := ptsl
+	if loss < 0 {
+		loss = ptsl + 1
+	}
+	win := ptsw2
+	if win > 0 {
+		win = eval.Pawns(int(ptsw2-1) / 2)
+	}
+
+	// We swap win/loss, because the evaluation here is from the points of the side to move. Sargon
+	// rather evaluates the last move.
+
+	mtrl -= loss + win
+	return mtrl, ptschk
 }
 
 // BoardControl implements the BRDC heuristic without limit.
@@ -78,11 +120,10 @@ func Mobility(ctx context.Context, b *board.Board, pins Pins) eval.Pawns {
 
 	var pawns eval.Pawns
 	for sq := board.ZeroSquare; sq < board.NumSquares; sq++ {
-		if !pos.IsEmpty(sq) {
-			continue
-		}
-		attackers := FindAttackers(pos, pins, sq)
-		pawns += eval.Pawns(NumAttackers(attackers, turn) - NumAttackers(attackers, turn.Opponent()))
+		att := FindAttackers(pos, pins, sq, turn)
+		opp := FindAttackers(pos, pins, sq, turn.Opponent())
+
+		pawns += eval.Pawns(NumAttackers(att) - NumAttackers(opp))
 	}
 	return pawns
 }

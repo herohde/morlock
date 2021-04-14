@@ -107,7 +107,8 @@ func TestFindAttackers(t *testing.T) {
 		require.NoError(t, err)
 
 		pins := sargon.FindKingQueenPins(b.Position())
-		attackers := sargon.FindAttackers(b.Position(), pins, tt.sq)
+		attackers := sargon.FindAttackers(b.Position(), pins, tt.sq, board.White)
+		attackers = append(attackers, sargon.FindAttackers(b.Position(), pins, tt.sq, board.Black)...)
 
 		actual := attSquares(attackers)
 		assert.Equal(t, actual.String(), tt.expected)

@@ -24,7 +24,7 @@ func TestBook(t *testing.T) {
 		pos   string
 		moves string
 	}{
-		{fen.Initial, "e2-e4 d2-d4"},
+		{fen.Initial, "d2-d4 e2-e4"},
 		{"rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1", "d7-d6"},
 	}
 
