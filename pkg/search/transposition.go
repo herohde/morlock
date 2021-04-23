@@ -88,7 +88,9 @@ func (t *table) Size() uint64 {
 }
 
 func (t *table) Used() float64 {
-	used := atomic.LoadUint64(&t.used)
+	// https://github.com/census-instrumentation/opencensus-go/issues/587
+	// used := atomic.LoadUint64(&t.used)
+	used := t.used
 	return float64(used) / float64(len(t.table))
 }
 
@@ -128,7 +130,9 @@ func (t *table) Write(hash board.ZobristHash, bound Bound, ply, depth int, score
 		}
 		if atomic.CompareAndSwapPointer(addr, unsafe.Pointer(ptr), unsafe.Pointer(fresh)) {
 			if ptr == nil {
-				atomic.AddUint64(&t.used, 1)
+				// https://github.com/census-instrumentation/opencensus-go/issues/587
+				// atomic.AddUint64(&t.used, 1)
+				t.used++
 			}
 			return true // ok: overwrite value
 		}
