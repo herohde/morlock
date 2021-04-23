@@ -85,6 +85,11 @@ func ParseMove(str string) (Move, error) {
 	return Move{From: from, To: to}, nil
 }
 
+// IsInvalid true iff the move is of invalid type. Convenience function.
+func (m Move) IsInvalid() bool {
+	return m.Type == 0
+}
+
 // IsCapture returns true iff the move is a Capture or CapturePromotion. Convenience function.
 func (m Move) IsCapture() bool {
 	return m.Type == CapturePromotion || m.Type == Capture
@@ -168,6 +173,10 @@ func (m Move) Equals(o Move) bool {
 }
 
 func (m Move) String() string {
+	if m.IsInvalid() {
+		return "invalid"
+	}
+
 	switch m.Type {
 	case Promotion:
 		return fmt.Sprintf("%v-%v=%v", m.From, m.To, m.Promotion)
@@ -203,62 +212,8 @@ func FormatMoves(list []Move, fn func(Move) string) string {
 }
 
 func ignorePawn(piece Piece) string {
-	if piece == Pawn {
+	if piece == Pawn || piece == NoPiece {
 		return ""
 	}
 	return piece.String()
-}
-
-// ByMVVLVA is a descending Most-Valuable-Victim-Least-Valuable-Attacker sort order for moves.
-type ByMVVLVA []Move
-
-func (b ByMVVLVA) Len() int {
-	return len(b)
-}
-
-func (b ByMVVLVA) Less(i, j int) bool {
-	fst, snd := moveValue(b[i]), moveValue(b[j])
-	if fst == snd {
-		return pieceValue(b[i].Piece) < pieceValue(b[j].Piece)
-	}
-	return fst > snd
-}
-
-func (b ByMVVLVA) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-// moveValue returns the nominal material gain from the move.
-func moveValue(m Move) int {
-	switch m.Type {
-	case CapturePromotion:
-		return pieceValue(m.Capture) + pieceValue(m.Promotion) - pieceValue(Pawn)
-	case Promotion:
-		return pieceValue(m.Promotion) - pieceValue(Pawn)
-	case Capture:
-		return pieceValue(m.Capture)
-	case EnPassant:
-		return pieceValue(Pawn)
-	default:
-		return 0
-	}
-}
-
-// pieceValue returns the absolute nominal value in pawns for move ordering.
-// The King has an arbitrary value of 100 pawns.
-func pieceValue(p Piece) int {
-	switch p {
-	case Pawn:
-		return 1
-	case Bishop, Knight:
-		return 3
-	case Rook:
-		return 5
-	case Queen:
-		return 9
-	case King:
-		return 100
-	default:
-		return 0
-	}
 }

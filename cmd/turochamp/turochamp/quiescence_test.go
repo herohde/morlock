@@ -35,7 +35,7 @@ func TestQuiescence(t *testing.T) {
 		b, err := fen.NewBoard(tt.fen, tt.moves...)
 		require.NoError(t, err)
 
-		nodes, actual := qs.QuietSearch(context.Background(), b, eval.NegInfScore, eval.InfScore, make(chan struct{}))
+		nodes, actual := qs.QuietSearch(context.Background(), search.EmptyContext, b, make(chan struct{}))
 		assert.Equal(t, nodes, tt.nodes, "failed: %v", tt.fen)
 		assert.Equal(t, actual, tt.expected, "failed: %v", tt.fen)
 	}

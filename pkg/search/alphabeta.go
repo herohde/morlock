@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
-	"sort"
 )
 
 // AlphaBeta implements alpha-beta pruning. Pseudo-code:
@@ -31,22 +30,21 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Alpha–beta_pruning.
 type AlphaBeta struct {
-	Pick        Selection
-	Eval        QuietSearch
-	Alpha, Beta eval.Score
+	Pick Selection
+	Eval QuietSearch
 }
 
-func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
-	run := &runAlphaBeta{pick: p.Pick, eval: p.Eval, b: b, quit: quit}
+func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
+	run := &runAlphaBeta{pick: p.Pick, eval: p.Eval, tt: sctx.TT, b: b, quit: quit}
 	if run.pick == nil {
 		run.pick = IsAnyMove
 	}
 	low, high := eval.NegInfScore, eval.InfScore
-	if !p.Alpha.IsInvalid() {
-		low = p.Alpha
+	if !sctx.Alpha.IsInvalid() {
+		low = sctx.Alpha
 	}
-	if !p.Beta.IsInvalid() {
-		high = p.Beta
+	if !sctx.Beta.IsInvalid() {
+		high = sctx.Beta
 	}
 
 	score, moves := run.search(ctx, depth, low, high)
@@ -59,6 +57,7 @@ func (p AlphaBeta) Search(ctx context.Context, b *board.Board, depth int, quit <
 type runAlphaBeta struct {
 	pick  Selection
 	eval  QuietSearch
+	tt    TranspositionTable
 	b     *board.Board
 	nodes uint64
 
@@ -73,21 +72,45 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 	if m.b.Result().Outcome == board.Draw {
 		return eval.ZeroScore, nil
 	}
+
+	var best board.Move
+	if bound, d, score, m, ok := m.tt.Read(m.b.Hash()); ok {
+		best = m
+		if depth <= d {
+			isOpp := (d-depth)%2 != 0
+			if isOpp {
+				// if opposing side move, then score is negative and an upper bound.
+				score = score.Negate()
+			}
+			if (bound == ExactBound || !isOpp) && (beta == score || beta.Less(score)) {
+				// logw.Debugf(ctx, "TT: %v@%v = %v, %v", bound, d, score, move)
+				return score, nil // cutoff
+			}
+		}
+	}
+
 	if depth == 0 {
-		nodes, score := m.eval.QuietSearch(ctx, m.b, alpha, beta, m.quit)
+		sctx := &Context{Alpha: alpha, Beta: beta, TT: m.tt}
+		nodes, score := m.eval.QuietSearch(ctx, sctx, m.b, m.quit)
 		m.nodes += nodes
+
+		m.tt.Write(m.b.Hash(), ExactBound, m.b.Ply(), 0, score, board.Move{})
 		return score, nil
 	}
 
 	m.nodes++
 
 	hasLegalMove := false
+	bound := ExactBound
 	var pv []board.Move
 
-	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
-	sort.Sort(board.ByMVVLVA(moves))
+	moves := NewMoveList(m.b.Position().PseudoLegalMoves(m.b.Turn()), First(best).MVVLVA)
+	for {
+		move, ok := moves.Next()
+		if !ok {
+			break
+		}
 
-	for _, move := range moves {
 		if !m.b.PushMove(move) {
 			continue
 		}
@@ -105,6 +128,7 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 		hasLegalMove = true
 
 		if alpha == beta || beta.Less(alpha) {
+			bound = LowerBound
 			break // cutoff
 		}
 	}
@@ -116,5 +140,13 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 		return eval.ZeroScore, nil
 	}
 
+	m.tt.Write(m.b.Hash(), bound, m.b.Ply(), depth, alpha, first(pv))
 	return alpha, pv
+}
+
+func first(pv []board.Move) board.Move {
+	if len(pv) == 0 {
+		return board.Move{}
+	}
+	return pv[0]
 }

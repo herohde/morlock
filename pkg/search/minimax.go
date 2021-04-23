@@ -28,7 +28,7 @@ type Minimax struct {
 	Eval eval.Evaluator
 }
 
-func (m Minimax) Search(ctx context.Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
+func (m Minimax) Search(ctx context.Context, sctx *Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
 	run := &runMinimax{eval: m.Eval, b: b, quit: quit}
 	score, moves := run.search(ctx, depth)
 	if IsClosed(quit) {

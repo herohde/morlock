@@ -29,6 +29,9 @@ type options struct {
 	useBook bool
 	book    engine.Book
 	rand    *rand.Rand
+
+	useHash bool
+	hash    int
 }
 
 // UseBook instructs the driver to use the given opening book.
@@ -37,6 +40,15 @@ func UseBook(book engine.Book, seed int64) Option {
 		opt.useBook = true
 		opt.book = book
 		opt.rand = rand.New(rand.NewSource(seed))
+	}
+}
+
+// UseHash instructs the driver to expose and use a Hash setting with the given default
+// size in MB. If not exposed, the engine will not use a transposition table.
+func UseHash(size int) Option {
+	return func(opt *options) {
+		opt.useHash = true
+		opt.hash = size
 	}
 }
 
@@ -225,6 +237,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 	//	   "option name NalimovPath type string default c:\\n"
 	//	   "option name Clear Hash type button\n"
 
+	if d.opt.useHash {
+		d.out <- fmt.Sprintf("option name Hash type spin default %v min 0 max %v", d.opt.hash, 16<<10)
+	}
 	if d.opt.book != nil {
 		d.out <- fmt.Sprintf("option name OwnBook type check default %v", d.opt.useBook)
 	}
@@ -312,6 +327,8 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				switch name {
 				case "OwnBook":
 					d.opt.useBook, _ = strconv.ParseBool(value)
+				case "Hash":
+					d.opt.hash, _ = strconv.Atoi(value)
 				}
 
 			case "register":
@@ -382,8 +399,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				if len(args) >= 7 && args[0] == "fen" {
 					position = strings.Join(args[1:7], " ")
 				}
-
-				if err := d.e.Reset(ctx, position); err != nil {
+				if err := d.e.Reset(ctx, position, uint64(d.opt.hash)<<20); err != nil {
 					logw.Errorf(ctx, "Invalid position: %v", line)
 					return
 				}
@@ -700,6 +716,9 @@ func printPV(pv search.PV) string {
 	}
 	if pv.Nodes > 0 && pv.Time > 0 {
 		parts = append(parts, fmt.Sprintf("nps %v", uint64(time.Second)*pv.Nodes/uint64(pv.Time)))
+	}
+	if pv.Hash > 0 {
+		parts = append(parts, fmt.Sprintf("hashfull %v", int(1000*pv.Hash)))
 	}
 	if len(pv.Moves) > 0 {
 		parts = append(parts, "pv")

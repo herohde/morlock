@@ -38,9 +38,9 @@ func main() {
 				Eval: eval.Material{},
 			},
 		}
-		e := engine.New(ctx, "morlock", "herohde", search.NewIterative(s, 0))
+		e := engine.New(ctx, "morlock", "herohde", s)
 
-		driver, out := uci.NewDriver(ctx, e, in)
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(128))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

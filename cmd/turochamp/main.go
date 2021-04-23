@@ -41,16 +41,16 @@ func main() {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		s := search.NewIterative(search.AlphaBeta{
+		s := search.AlphaBeta{
 			Eval: search.Quiescence{
 				Pick: turochamp.IsConsiderableMove,
 				Eval: turochamp.Eval{},
 			},
-		}, *ply)
+		}
 
-		e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s)
+		e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
 
-		driver, out := uci.NewDriver(ctx, e, in)
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(128))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

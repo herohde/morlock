@@ -44,16 +44,19 @@ func main() {
 		// Use UCI protocol.
 
 		points := &sargon.Points{}
-		s := search.NewIterative(search.AlphaBeta{
-			Pick: search.IsNotUnderPromotion,
-			Eval: sargon.OnePlyIfChecked{
-				Eval: points,
+		s := sargon.Hook{
+			Eval: search.AlphaBeta{
+				Pick: search.IsNotUnderPromotion,
+				Eval: sargon.OnePlyIfChecked{
+					Eval: points,
+				},
 			},
-		}, *ply, points.Reset)
+			Hook: points,
+		}
 
-		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s)
+		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
 
-		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(64), uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

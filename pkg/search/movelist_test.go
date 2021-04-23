@@ -1,13 +1,13 @@
-package board_test
+package search_test
 
 import (
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/search"
 	"github.com/stretchr/testify/assert"
-	"sort"
 	"testing"
 )
 
-func TestMoveByScore(t *testing.T) {
+func TestMVVLVA(t *testing.T) {
 	nb := board.Move{Type: board.Normal, Piece: board.Bishop}
 	nq := board.Move{Type: board.Normal, Piece: board.Queen}
 	cqb := board.Move{Type: board.Capture, Piece: board.Queen, Capture: board.Bishop}
@@ -38,7 +38,15 @@ func TestMoveByScore(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		sort.Sort(board.ByMVVLVA(tt.in))
-		assert.Equal(t, printMoves(tt.in), printMoves(tt.out))
+		var moves []board.Move
+		list := search.NewMoveList(tt.in, search.MVVLVA)
+		for {
+			move, ok := list.Next()
+			if !ok {
+				break
+			}
+			moves = append(moves, move)
+		}
+		assert.Equal(t, board.PrintMoves(moves), board.PrintMoves(tt.out))
 	}
 }

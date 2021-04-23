@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
-	"sort"
 )
 
 // Quiescence implements a configurable alpha-beta QuietSearch.
@@ -13,9 +12,18 @@ type Quiescence struct {
 	Eval eval.Evaluator
 }
 
-func (q Quiescence) QuietSearch(ctx context.Context, b *board.Board, alpha, beta eval.Score, quit <-chan struct{}) (uint64, eval.Score) {
+func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Board, quit <-chan struct{}) (uint64, eval.Score) {
 	run := &runQuiescence{pick: q.Pick, eval: q.Eval, b: b, quit: quit}
-	score := run.search(ctx, alpha, beta)
+
+	low, high := eval.NegInfScore, eval.InfScore
+	if !sctx.Alpha.IsInvalid() {
+		low = sctx.Alpha
+	}
+	if !sctx.Beta.IsInvalid() {
+		high = sctx.Beta
+	}
+
+	score := run.search(ctx, low, high)
 	return run.nodes, score
 }
 
@@ -47,10 +55,13 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
 	// Also do not report mate-in-X endings.
 
-	moves := r.b.Position().PseudoLegalMoves(turn)
-	sort.Sort(board.ByMVVLVA(moves))
+	moves := NewMoveList(r.b.Position().PseudoLegalMoves(turn), MVVLVA)
+	for {
+		m, ok := moves.Next()
+		if !ok {
+			break
+		}
 
-	for _, m := range moves {
 		if !r.b.PushMove(m) {
 			continue
 		}

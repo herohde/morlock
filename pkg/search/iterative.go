@@ -3,45 +3,25 @@ package search
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/seekerror/logw"
 	"go.uber.org/atomic"
 	"sync"
 	"time"
 )
 
-// Hook offers easy insertion of custom logic on search initialization.
-type Hook func(ctx context.Context, b *board.Board)
-
 // Iterative is a search harness for iterative deepening search.
 type Iterative struct {
-	search     Search
-	depthLimit int // 0 if not max
-	hooks      []Hook
+	Root Search
 }
 
-func NewIterative(search Search, depthLimit int, hooks ...Hook) Launcher {
-	return &Iterative{
-		search:     search,
-		depthLimit: depthLimit,
-		hooks:      hooks,
-	}
-}
-
-func (i *Iterative) Launch(ctx context.Context, b *board.Board, opt Options) (Handle, <-chan PV) {
-	if i.depthLimit > 0 && opt.DepthLimit == nil {
-		opt.DepthLimit = &i.depthLimit
-	}
-
-	for _, fn := range i.hooks {
-		fn(ctx, b)
-	}
-
+func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt TranspositionTable, opt Options) (Handle, <-chan PV) {
 	out := make(chan PV, 1)
 	h := &handle{
 		init: make(chan struct{}),
 		quit: make(chan struct{}),
 	}
-	go h.process(ctx, i.search, b, opt, out)
+	go h.process(ctx, i.Root, b, tt, opt, out)
 
 	return h, out
 }
@@ -54,17 +34,18 @@ type handle struct {
 	mu sync.Mutex
 }
 
-func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt Options, out chan PV) {
+func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt TranspositionTable, opt Options, out chan PV) {
 	defer h.markInitialized()
 	defer close(out)
 
+	sctx := &Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt}
 	soft, useSoft := EnforceTimeControl(ctx, h, opt.TimeControl, b.Turn())
 
 	depth := 1
 	for !h.done.Load() {
 		start := time.Now()
 
-		nodes, score, moves, err := search.Search(ctx, b, depth, h.quit)
+		nodes, score, moves, err := search.Search(ctx, sctx, b, depth, h.quit)
 		if err != nil {
 			if err == ErrHalted {
 				return // Halt was called.
@@ -79,6 +60,9 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, opt
 			Score: score,
 			Moves: moves,
 			Time:  time.Since(start),
+		}
+		if tt != nil {
+			pv.Hash = tt.Used()
 		}
 
 		logw.Debugf(ctx, "Searched %v: %v", b.Position(), pv)

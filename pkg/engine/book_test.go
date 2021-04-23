@@ -7,6 +7,8 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +33,9 @@ func TestBook(t *testing.T) {
 	for _, tt := range tests {
 		list, err := book.Find(ctx, tt.pos)
 		assert.NoError(t, err)
-		assert.Equal(t, board.PrintMoves(list), tt.moves)
+
+		sorted := strings.Split(board.PrintMoves(list), " ")
+		sort.Strings(sorted)
+		assert.Equal(t, strings.Join(sorted, " "), tt.moves)
 	}
 }

@@ -26,6 +26,7 @@ type Board struct {
 	zt          *ZobristTable
 	repetitions map[ZobristHash]int
 
+	hasCastled [NumColors]bool
 	ply, moves int
 	turn       Color
 	result     Result
@@ -59,6 +60,7 @@ func (b *Board) Fork() *Board {
 	fork := &Board{
 		zt:          b.zt,
 		repetitions: map[ZobristHash]int{},
+		hasCastled:  b.hasCastled,
 		ply:         b.ply,
 		moves:       b.moves,
 		turn:        b.turn,
@@ -139,6 +141,9 @@ func (b *Board) PushMove(m Move) bool {
 
 	// (2) Update board-level metadata.
 
+	if m.IsCastle() {
+		b.hasCastled[b.turn] = true
+	}
 	b.turn = b.turn.Opponent()
 	b.repetitions[b.current.hash]++
 	b.ply++
@@ -184,6 +189,9 @@ func (b *Board) PopMove() (Move, bool) {
 
 	// (1) Update board-level metadata.
 
+	if b.current.prev.next.IsCastle() {
+		b.hasCastled[b.turn.Opponent()] = false
+	}
 	b.turn = b.turn.Opponent()
 	b.repetitions[b.current.hash]--
 	b.result = Result{Outcome: Undecided} // a legal move was made, so not terminal
@@ -249,17 +257,7 @@ func (b *Board) SecondToLastMove() (Move, bool) {
 
 // HasCasted returns true iff the color has castled.
 func (b *Board) HasCastled(c Color) bool {
-	t := b.turn.Opponent()
-	cur := b.current.prev
-
-	for cur != nil {
-		if t == c && cur.next.Type == QueenSideCastle || cur.next.Type == KingSideCastle {
-			return true
-		}
-		t = t.Opponent()
-		cur = cur.prev
-	}
-	return false
+	return b.hasCastled[c]
 }
 
 // HasMoved returns which pieces have moved, up to the given limit.

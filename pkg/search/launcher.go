@@ -6,31 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
-	"github.com/herohde/morlock/pkg/eval"
 	"strings"
-	"time"
 )
 
 // ErrHalted is an error indicating that the search was halted.
 var ErrHalted = errors.New("search halted")
 
-// PV represents the principal variation for some search depth.
-type PV struct {
-	Depth int
-	Moves []board.Move
-	Score eval.Score
-	Nodes uint64
-	Time  time.Duration
-}
-
-func (p PV) String() string {
-	pv := board.PrintMoves(p.Moves)
-	return fmt.Sprintf("depth=%v score=%v nodes=%v time=%v pv=%v", p.Depth, p.Score, p.Nodes, p.Time, pv)
-}
-
 // Options hold dynamic search options. The user may change these on a particular search.
 type Options struct {
-	// DepthLimit, if set, limits the search to the given depth.
+	// DepthLimit, if set, limits the search to the given ply depth.
 	DepthLimit *int
 	// TimeControl, if set, limits the search to the given time parameters.
 	TimeControl *TimeControl
@@ -47,12 +31,12 @@ func (o Options) String() string {
 	return fmt.Sprintf("[%v]", strings.Join(ret, ", "))
 }
 
-// Launcher is a Search generator.
+// Launcher is an interface for managing searches.
 type Launcher interface {
 	// Launch a new search from the given position. It expects an exclusive (forked) board and
 	// returns a PV channel for iteratively deeper searches. If the search is exhausted, the
 	// channel is closed. The search can be stopped at any time.
-	Launch(ctx context.Context, b *board.Board, opt Options) (Handle, <-chan PV)
+	Launch(ctx context.Context, b *board.Board, tt TranspositionTable, opt Options) (Handle, <-chan PV)
 }
 
 // Handle is an interface for the engine to manage searches. The engine is expected to spin off

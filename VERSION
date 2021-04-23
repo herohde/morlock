@@ -6,6 +6,9 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 21. apr 2021; Version 0.89 ###
+  - Added transposition tables and move ordering w/ hash hit.
+
 ### 6. apr 2021; Version 0.88 ###
   - Changed SARGON to use absolute disjoint evaluations. It was playing oddly on lichess, especially "sargon-4ply".
 

@@ -43,3 +43,19 @@ func NominalValue(p board.Piece) Pawns {
 		return 0
 	}
 }
+
+// NominalValueGain is the nominal material gain for a move.
+func NominalValueGain(m board.Move) Pawns {
+	switch m.Type {
+	case board.CapturePromotion:
+		return NominalValue(m.Capture) + NominalValue(m.Promotion) - NominalValue(board.Pawn)
+	case board.Promotion:
+		return NominalValue(m.Promotion) - NominalValue(board.Pawn)
+	case board.Capture:
+		return NominalValue(m.Capture)
+	case board.EnPassant:
+		return NominalValue(board.Pawn)
+	default:
+		return 0
+	}
+}

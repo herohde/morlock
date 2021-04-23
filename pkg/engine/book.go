@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
-	"sort"
 	"strings"
 )
 
@@ -71,7 +70,6 @@ func NewBook(lines []Line) (Book, error) {
 		for move, _ := range v {
 			list = append(list, move)
 		}
-		sort.Sort(board.ByMVVLVA(list))
 		dedup[k] = list
 	}
 	return &book{moves: dedup}, nil

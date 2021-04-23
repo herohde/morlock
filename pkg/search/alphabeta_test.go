@@ -39,7 +39,7 @@ func TestAlphaBeta(t *testing.T) {
 			b, err := fen.NewBoard(tt.fen)
 			require.NoError(t, err)
 
-			n, actual, _, _ := pvs.Search(ctx, b, tt.depth, make(chan struct{}))
+			n, actual, _, _ := pvs.Search(ctx, search.EmptyContext, b, tt.depth, make(chan struct{}))
 			assert.Lessf(t, n, uint64(16000), "too many nodes: %v", tt.fen)
 			assert.Equalf(t, actual, tt.expected, "failed: %v", tt.fen)
 		}
@@ -54,12 +54,36 @@ func TestAlphaBeta(t *testing.T) {
 			b, err := fen.NewBoard(tt.fen)
 			require.NoError(t, err)
 
-			n, actual, _, _ := pvs.Search(ctx, b, tt.depth, make(chan struct{}))
-			m, expected, _, _ := minimax.Search(ctx, b, tt.depth, make(chan struct{}))
-			t.Logf("POS: %v; NODES: %v (minimax %v)", tt.fen, n, m)
+			n, actual, _, _ := pvs.Search(ctx, search.EmptyContext, b, tt.depth, make(chan struct{}))
+			n2, actual2, _, _ := pvs.Search(ctx, &search.Context{TT: search.NewTranspositionTable(ctx, 64<<20)}, b, tt.depth, make(chan struct{}))
+			m, expected, _, _ := minimax.Search(ctx, search.EmptyContext, b, tt.depth, make(chan struct{}))
+			t.Logf("POS: %v; NODES: %v /tt:%v (minimax %v)", tt.fen, n, n2, m)
 
 			assert.LessOrEqualf(t, n, m, "more than minimax nodes: %v", tt.fen)
+			assert.Equalf(t, actual, actual2, "tt failed: %v", tt.fen)
 			assert.Equalf(t, actual, expected, "failed: %v", tt.fen)
 		}
 	})
+}
+
+func BenchmarkAlphaBeta1(b *testing.B) {
+	pos, _ := fen.NewBoard("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+	s := search.AlphaBeta{Eval: search.ZeroPly{Eval: eval.Material{}}}
+
+	for i := 0; i < b.N; i++ {
+		s.Search(context.Background(), &search.Context{TT: search.NoTranspositionTable{}}, pos, 4, make(chan struct{}))
+	}
+}
+
+func BenchmarkAlphaBeta1_TT(b *testing.B) {
+	ctx := context.Background()
+	pos, _ := fen.NewBoard("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+	s := search.AlphaBeta{Eval: search.ZeroPly{Eval: eval.Material{}}}
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		tt := search.NewTranspositionTable(ctx, 64<<20)
+		b.StartTimer()
+		s.Search(ctx, &search.Context{TT: tt}, pos, 4, make(chan struct{}))
+	}
 }
