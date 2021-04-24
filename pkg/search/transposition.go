@@ -186,7 +186,7 @@ func NewMinDepthTranspositionTable(min int) TranspositionTableFactory {
 	return func(ctx context.Context, size uint64) TranspositionTable {
 		return WriteLimited{
 			Filter: func(hash board.ZobristHash, bound Bound, ply, depth int, score eval.Score, move board.Move) bool {
-				return depth >= min
+				return depth < min
 			},
 			TT: NewTranspositionTable(ctx, size),
 		}

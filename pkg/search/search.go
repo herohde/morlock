@@ -8,7 +8,8 @@ import (
 
 // Context holds optional context for search implementations.
 type Context struct {
-	Alpha, Beta eval.Score // Limit search to a [Alpha;Beta] Window
+	Alpha, Beta eval.Score   // Limit search to a [Alpha;Beta] Window
+	Ponder      []board.Move // Limit search to variation, if present.
 
 	TT TranspositionTable // HashTable
 }

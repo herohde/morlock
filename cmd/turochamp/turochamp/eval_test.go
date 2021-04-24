@@ -56,21 +56,26 @@ func TestMaterial(t *testing.T) {
 func TestPositionPlay(t *testing.T) {
 	tests := []struct {
 		fen      string
+		moves    []string
 		expected eval.Pawns
 	}{
-		{fen.Initial, 8},
-		{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", 8},
-		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", 2.3},
-		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", 2.3},
-		{"k7/8/8/8/8/8/8/7K w - - 0 1", -3},
-		{"k7/8/8/8/8/8/8/7K b - - 0 1", -3},
-		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", 2.5},
-		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", 0.6},
-		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", 40.4},
+		{fen.Initial, nil, 8},
+		{fen.Initial, []string{"e2e3"}, 8}, // ignores opponent progress
+		{fen.Initial, []string{"e2e4"}, 8},
+		{fen.Initial, []string{"d2d3"}, 8},
+		{fen.Initial, []string{"d2d4"}, 8},
+		{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", nil, 8},
+		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", nil, 2.3},
+		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", nil, 2.3},
+		{"k7/8/8/8/8/8/8/7K w - - 0 1", nil, -3},
+		{"k7/8/8/8/8/8/8/7K b - - 0 1", nil, -3},
+		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", nil, 2.5},
+		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", nil, 0.6},
+		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", nil, 40.4},
 	}
 
 	for _, tt := range tests {
-		b, err := fen.NewBoard(tt.fen)
+		b, err := fen.NewBoard(tt.fen, tt.moves...)
 		require.NoError(t, err)
 
 		actual := turochamp.PositionPlay{}.Evaluate(context.Background(), b)

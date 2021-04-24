@@ -35,10 +35,7 @@ type AlphaBeta struct {
 }
 
 func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
-	run := &runAlphaBeta{pick: p.Pick, eval: p.Eval, tt: sctx.TT, b: b, quit: quit}
-	if run.pick == nil {
-		run.pick = IsAnyMove
-	}
+	run := &runAlphaBeta{pick: pick(p.Pick), ponder: sctx.Ponder, eval: p.Eval, tt: sctx.TT, b: b, quit: quit}
 	low, high := eval.NegInfScore, eval.InfScore
 	if !sctx.Alpha.IsInvalid() {
 		low = sctx.Alpha
@@ -60,6 +57,8 @@ type runAlphaBeta struct {
 	tt    TranspositionTable
 	b     *board.Board
 	nodes uint64
+
+	ponder []board.Move
 
 	quit <-chan struct{}
 }
@@ -100,6 +99,14 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 
 	m.nodes++
 
+	var ponder board.Move
+	ponderOnly := false
+	if len(m.ponder) > 0 {
+		ponder = m.ponder[0]
+		m.ponder = m.ponder[1:]
+		ponderOnly = true
+	}
+
 	hasLegalMove := false
 	bound := ExactBound
 	var pv []board.Move
@@ -115,7 +122,7 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 			continue
 		}
 
-		if m.pick(ctx, move, m.b) {
+		if m.pick(ctx, move, m.b) && (!ponderOnly || ponder.Equals(move)) {
 			score, rem := m.search(ctx, depth-1, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			if alpha.Less(score) {
@@ -149,4 +156,11 @@ func first(pv []board.Move) board.Move {
 		return board.Move{}
 	}
 	return pv[0]
+}
+
+func pick(p Selection) Selection {
+	if p == nil {
+		return IsAnyMove
+	}
+	return p
 }

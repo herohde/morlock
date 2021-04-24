@@ -88,7 +88,15 @@ func (e *Engine) Author() string {
 	return e.author
 }
 
-// Position returns the current position in FEN format.
+// Board returns a forked board.
+func (e *Engine) Board() *board.Board {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return e.b.Fork()
+}
+
+// Position returns the current position in FEN format. Convenience function.
 func (e *Engine) Position() string {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -150,6 +158,22 @@ func (e *Engine) Move(ctx context.Context, move string) error {
 		return nil
 	}
 	return fmt.Errorf("invalid move: %v", candidate)
+}
+
+// TakeBack undoes the latest move.
+func (e *Engine) TakeBack(ctx context.Context) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	_, _ = e.haltSearchIfActive(ctx)
+
+	m, ok := e.b.PopMove()
+	if !ok {
+		return fmt.Errorf("no move to take back")
+	}
+
+	logw.Infof(ctx, "Takeback %v", m)
+	return nil
 }
 
 // Analyze analyzes the current position.

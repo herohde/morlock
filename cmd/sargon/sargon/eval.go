@@ -6,8 +6,9 @@ import (
 	"github.com/herohde/morlock/pkg/eval"
 )
 
-// Points implements the POINTS evaluation. It uses the full score for material and board control, given we do not
-// have a representation size limit. As long as they are disjoint, they should reflect the original scheme.
+// Points implements the POINTS evaluation. It uses the full score for material and board
+// control, given we do not have a representation size limit. As long as they are disjoint
+// and the LIMIT 6 BRDC value is still blended in, they should reflect the original scheme.
 type Points struct {
 	side0 board.Color
 	brdc0 eval.Pawns
@@ -23,17 +24,17 @@ func (p *Points) Reset(ctx context.Context, b *board.Board) {
 func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	pins := FindKingQueenPins(b.Position())
 
+	brdc := BoardControl(ctx, b, pins)
 	mtrl, ptschk := Material(ctx, b, pins)
 	if ptschk {
-		return mtrl * 4
+		return mtrl*4 + brdc/100
 	}
 
-	brdc := BoardControl(ctx, b, pins)
 	brdc0 := p.brdc0
 	if b.Turn() != p.side0 {
 		brdc0 = -brdc0
 	}
-	return mtrl*4 + eval.Limit(brdc-p.brdc0, 6)
+	return mtrl*4 + eval.Limit(brdc-p.brdc0, 6) + brdc/100
 }
 
 // Notes
@@ -52,7 +53,7 @@ func (p *Points) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 //   - Use PTSW2 if moving piece was lost.
 //
 //  PSTL:  if >0 then -1
-//   - adjustment: (PSTW1 + PTSW2 -1)/2 - PSTL.   (omit x-1/2 if PTSW2 == 0)
+//   - adjustment: (PTSW2 -1)/2 - PSTL.
 
 // Material implements the MTRL heuristic without limit plus the ptschk (= moving into loss).
 func Material(ctx context.Context, b *board.Board, pins Pins) (eval.Pawns, bool) {
@@ -92,13 +93,17 @@ func Material(ctx context.Context, b *board.Board, pins Pins) (eval.Pawns, bool)
 		ptsw1, ptsw2 = ptsw2, 0
 	}
 
+	// NOTE(herohde) 4/22/2021: the interaction between doubling the exchange value, 4x MTRL and
+	// limit 6 BRDC and ptschk is subtle. Following the assembly seem to put pawns en prise.
+	// Instead follow the BYTE article for 3/4 of PTSW2?
+
 	loss := ptsl
 	if loss < 0 {
-		loss = ptsl + 1
+		loss = 2*ptsl + 1
 	}
 	win := ptsw2
 	if win > 0 {
-		win = eval.Pawns(int(ptsw2-1) / 2)
+		win = (2*ptsw2 - 1) / 2
 	}
 
 	// We swap win/loss, because the evaluation here is from the points of the side to move. Sargon

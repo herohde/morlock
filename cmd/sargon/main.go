@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/herohde/morlock/cmd/sargon/sargon"
 	"github.com/herohde/morlock/pkg/engine"
+	"github.com/herohde/morlock/pkg/engine/console"
 	"github.com/herohde/morlock/pkg/engine/uci"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
@@ -38,25 +39,31 @@ func main() {
 
 	logw.Infof(ctx, "SARGON 1978 chess engine (%v ply)", *ply)
 
+	points := &sargon.Points{}
+	s := sargon.Hook{
+		Eval: search.AlphaBeta{
+			Pick: search.IsNotUnderPromotion,
+			Eval: sargon.OnePlyIfChecked{
+				Eval: points,
+			},
+		},
+		Hook: points,
+	}
+
+	e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
+
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		points := &sargon.Points{}
-		s := sargon.Hook{
-			Eval: search.AlphaBeta{
-				Pick: search.IsNotUnderPromotion,
-				Eval: sargon.OnePlyIfChecked{
-					Eval: points,
-				},
-			},
-			Hook: points,
-		}
-
-		e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
-
 		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(64), uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
+		go engine.WriteStdoutLines(ctx, out)
+
+		<-driver.Closed()
+
+	case console.ProtocolName:
+		driver, out := console.NewDriver(ctx, e, s, in, console.UseHash(64))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()
