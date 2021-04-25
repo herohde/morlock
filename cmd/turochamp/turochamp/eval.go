@@ -9,12 +9,13 @@ import (
 	"github.com/herohde/morlock/pkg/board"
 )
 
-// Eval implements the TUROCHAMP evaluation function.
+// Eval implements the TUROCHAMP evaluation function. We use the position play symmetrically
+// for a more stable score, similar to Material.
 type Eval struct{}
 
 func (Eval) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	mat := Material{}.Evaluate(ctx, b)
-	pp := PositionPlay{}.Evaluate(ctx, b)
+	pp := PositionPlay(b, b.Turn()) - PositionPlay(b, b.Turn().Opponent())
 
 	// Combine scores to ensure material strictly dominates: MMMMMP.PP.
 
@@ -104,11 +105,8 @@ func pieceValue(piece board.Piece) eval.Pawns {
 //  * Mates and checks. Add 1.0 point for the threat of mate and 0.5 point for a check.
 //
 // We score with 1 decimal point precision as described. The range is [-55;55].
-type PositionPlay struct{}
-
-func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
+func PositionPlay(b *board.Board, turn board.Color) eval.Pawns {
 	pos := b.Position()
-	turn := b.Turn()
 
 	var score eval.Pawns
 
@@ -118,10 +116,14 @@ func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	if b.HasCastled(turn) {
 		score += 1
 	}
+	if pos.IsChecked(turn.Opponent()) {
+		score += 0.5
+	}
+
 	// (1) Analyze mobility, castling and checks/checkmates.
 
 	mobility := map[board.Square]int{}
-	var mayCheckMate, mayCheck, mayCastle bool
+	var mayCheckMate, mayCastle bool
 
 	for _, m := range pos.PseudoLegalMoves(turn) {
 		next, ok := pos.Move(m)
@@ -131,9 +133,6 @@ func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 
 		if !mayCheckMate && next.IsCheckMate(turn.Opponent()) {
 			mayCheckMate = true
-			score += 1
-		} else if !mayCheck && next.IsChecked(turn.Opponent()) {
-			mayCheck = true
 			score += 1
 		}
 		if !mayCastle && m.IsCastle() {
@@ -180,8 +179,8 @@ func (PositionPlay) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 
 	if king := pos.Piece(turn, board.King); king != 0 {
 		attackboard := board.QueenAttackboard(pos.Rotated(), king.LastPopSquare())
-		safety := attackboard.PopCount()
-		safety += (attackboard & pos.Color(turn.Opponent())).PopCount()
+		safety := (attackboard &^ pos.Color(turn)).PopCount()
+		// safety += (attackboard & pos.Color(turn.Opponent())).PopCount()
 
 		score -= eval.Pawns(math.Round(10*math.Sqrt(float64(safety)))) / 10
 	}

@@ -3,6 +3,7 @@ package turochamp_test
 import (
 	"context"
 	"github.com/herohde/morlock/cmd/turochamp/turochamp"
+	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/stretchr/testify/assert"
@@ -55,31 +56,36 @@ func TestMaterial(t *testing.T) {
 
 func TestPositionPlay(t *testing.T) {
 	tests := []struct {
-		fen      string
-		moves    []string
-		expected eval.Pawns
+		fen   string
+		moves []string
+		w, b  eval.Pawns
 	}{
-		{fen.Initial, nil, 8},
-		{fen.Initial, []string{"e2e3"}, 8}, // ignores opponent progress
-		{fen.Initial, []string{"e2e4"}, 8},
-		{fen.Initial, []string{"d2d3"}, 8},
-		{fen.Initial, []string{"d2d4"}, 8},
-		{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", nil, 8},
-		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", nil, 2.3},
-		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", nil, 2.3},
-		{"k7/8/8/8/8/8/8/7K w - - 0 1", nil, -3},
-		{"k7/8/8/8/8/8/8/7K b - - 0 1", nil, -3},
-		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", nil, 2.5},
-		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", nil, 0.6},
-		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", nil, 40.4},
+		{fen.Initial, nil, 10.20, 10.20},
+		{fen.Initial, []string{"e2e3"}, 14.60, 10.20}, // +4.4 (ignores opponent progress)
+		{fen.Initial, []string{"e2e4"}, 14.40, 10.20}, // +4.2
+		{fen.Initial, []string{"d2d3"}, 12.90, 10.20},
+		{fen.Initial, []string{"d2d4"}, 13.50, 10.20},
+		/*
+			{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", nil, 8, 0},
+			{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", nil, 2.3, 0},
+			{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", nil, 2.3, 0},
+			{"k7/8/8/8/8/8/8/7K w - - 0 1", nil, -3, 0},
+			{"k7/8/8/8/8/8/8/7K b - - 0 1", nil, -3, 0},
+			{"kb6/8/8/8/8/8/8/6QK w - - 0 1", nil, 1.5, 0},
+			{"kb6/8/8/8/8/8/8/6QK b - - 0 1", nil, 0.6, 0},
+			{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", nil, 39.90, 0},
+		*/
 	}
 
 	for _, tt := range tests {
 		b, err := fen.NewBoard(tt.fen, tt.moves...)
 		require.NoError(t, err)
 
-		actual := turochamp.PositionPlay{}.Evaluate(context.Background(), b)
-		assert.Equal(t, actual.String(), tt.expected.String())
+		actual := turochamp.PositionPlay(b, board.White)
+		assert.Equalf(t, actual.String(), tt.w.String(), "white: %v", b)
+
+		actual2 := turochamp.PositionPlay(b, board.Black)
+		assert.Equalf(t, actual2.String(), tt.b.String(), "black: %v", b)
 	}
 }
 
@@ -88,20 +94,20 @@ func TestEval(t *testing.T) {
 		fen      string
 		expected eval.Pawns // not really in centi-pawns
 	}{
-		{fen.Initial, 0.8},
-		{"k7/8/8/8/8/8/8/7K w - - 0 1", -0.3},
-		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", 2860.25},
-		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", -2859.94},
-		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", 226004.05},
+		{fen.Initial, 0},
+		{"k7/8/8/8/8/8/8/7K w - - 0 1", 0},
+		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", 2860.09},
+		{"kb6/8/8/8/8/8/8/6QK b - - 0 1", -2860.09},
+		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", 226004.66},
 
-		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 2.34},
-		{"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 0.38},
-		{"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 1020.97},
-		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 1.97},
-		{"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 2.65},
-		{"r4rk1/2p1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1022.65},
-		{"r4rk1/4qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1052.65},
-		{"r4rk1/4q1pp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1082.67},
+		{"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 0},
+		{"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", -0.01},
+		{"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 1018.69},
+		{"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 0.34},
+		{"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 0},
+		{"r4rk1/2p1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1020.10},
+		{"r4rk1/4qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1050.07},
+		{"r4rk1/4q1pp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 1081.59},
 	}
 
 	for _, tt := range tests {

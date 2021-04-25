@@ -9,9 +9,11 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/console"
 	"github.com/herohde/morlock/pkg/engine/uci"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
+	"time"
 )
 
 var (
@@ -40,7 +42,7 @@ func main() {
 	s := search.AlphaBeta{
 		Eval: search.Quiescence{
 			Pick: turochamp.IsConsiderableMove,
-			Eval: turochamp.Eval{},
+			Eval: eval.Randomize(turochamp.Eval{}, 10, time.Now().UnixNano()),
 		},
 	}
 

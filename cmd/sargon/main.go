@@ -9,6 +9,7 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/console"
 	"github.com/herohde/morlock/pkg/engine/uci"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
@@ -44,7 +45,7 @@ func main() {
 		Eval: search.AlphaBeta{
 			Pick: search.IsNotUnderPromotion,
 			Eval: sargon.OnePlyIfChecked{
-				Eval: points,
+				Eval: eval.Randomize(points, 10, time.Now().UnixNano()),
 			},
 		},
 		Hook: points,
