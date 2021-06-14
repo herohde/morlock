@@ -65,16 +65,12 @@ func TestPositionPlay(t *testing.T) {
 		{fen.Initial, []string{"e2e4"}, 14.40, 10.20}, // +4.2
 		{fen.Initial, []string{"d2d3"}, 12.90, 10.20},
 		{fen.Initial, []string{"d2d4"}, 13.50, 10.20},
-		/*
-			{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", nil, 8, 0},
-			{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", nil, 2.3, 0},
-			{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK b - - 0 1", nil, 2.3, 0},
-			{"k7/8/8/8/8/8/8/7K w - - 0 1", nil, -3, 0},
-			{"k7/8/8/8/8/8/8/7K b - - 0 1", nil, -3, 0},
-			{"kb6/8/8/8/8/8/8/6QK w - - 0 1", nil, 1.5, 0},
-			{"kb6/8/8/8/8/8/8/6QK b - - 0 1", nil, 0.6, 0},
-			{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", nil, 39.90, 0},
-		*/
+
+		{"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1", nil, 10.20, 10.20},
+		{"kr6/pppppppp/8/8/8/8/PPPPPPPP/6RK w - - 0 1", nil, 4.00, 4.00},
+		{"k7/8/8/8/8/8/8/7K w - - 0 1", nil, -2.90, -2.90},
+		{"kb6/8/8/8/8/8/8/6QK w - - 0 1", nil, 1.8, 0.90},
+		{"rnbqkbnr/qqqqqqqq/8/8/8/8/8/7K b - - 0 1", nil, -4.40, 42.10},
 	}
 
 	for _, tt := range tests {
