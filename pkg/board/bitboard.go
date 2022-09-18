@@ -135,7 +135,7 @@ func init() {
 	}
 }
 
-// KnighAttackboard returns all potential moves/attacks for a Knight at the given square.
+// KnightAttackboard returns all potential moves/attacks for a Knight at the given square.
 func KnightAttackboard(sq Square) Bitboard {
 	return knight[sq]
 }

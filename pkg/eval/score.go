@@ -97,7 +97,7 @@ func (s Score) MateDistance() (int8, bool) {
 	}
 }
 
-// Negates returns the negative score, as viewed from the opponent.
+// Negate returns the negative score, as viewed from the opponent.
 func (s Score) Negate() Score {
 	switch s.Type {
 	case Heuristic:

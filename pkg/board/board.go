@@ -247,7 +247,7 @@ func (b *Board) LastMove() (Move, bool) {
 	return Move{}, false
 }
 
-// LastMove returns the second-to-last move, if any.
+// SecondToLastMove returns the second-to-last move, if any.
 func (b *Board) SecondToLastMove() (Move, bool) {
 	if b.current.prev != nil && b.current.prev.prev != nil {
 		return b.current.prev.prev.next, true
@@ -255,7 +255,7 @@ func (b *Board) SecondToLastMove() (Move, bool) {
 	return Move{}, false
 }
 
-// HasCasted returns true iff the color has castled.
+// HasCastled returns true iff the color has castled.
 func (b *Board) HasCastled(c Color) bool {
 	return b.hasCastled[c]
 }

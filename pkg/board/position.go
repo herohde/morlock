@@ -388,26 +388,3 @@ func safeCastlingSquares(c Color, t MoveType) []Square {
 		}
 	}
 }
-
-// rookSquares return the rook squares for castling.
-func rookSquares(c Color, t MoveType) []Square {
-	if c == White {
-		switch t {
-		case KingSideCastle:
-			return []Square{F1, H1}
-		case QueenSideCastle:
-			return []Square{A1, D1}
-		default:
-			return nil
-		}
-	} else {
-		switch t {
-		case KingSideCastle:
-			return []Square{F8, H8}
-		case QueenSideCastle:
-			return []Square{A8, D8}
-		default:
-			return nil
-		}
-	}
-}
