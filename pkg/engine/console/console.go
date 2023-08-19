@@ -181,6 +181,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 					d.opt.hash, _ = strconv.Atoi(args[0])
 				}
 
+			case "nohash":
+				d.opt.hash = 0
+
 			case "halt", "stop":
 				pv, err := d.e.Halt(ctx)
 				if err != nil {

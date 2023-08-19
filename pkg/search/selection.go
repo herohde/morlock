@@ -15,6 +15,11 @@ func IsAnyMove(ctx context.Context, m board.Move, b *board.Board) bool {
 	return true
 }
 
+// NoMove is a trivial selection of no moves. Used to disable quiescence.
+func NoMove(ctx context.Context, m board.Move, b *board.Board) bool {
+	return false
+}
+
 // IsNotUnderPromotion selects any move, except under-promotions.
 func IsNotUnderPromotion(ctx context.Context, m board.Move, b *board.Board) bool {
 	return !m.IsPromotion() || m.Promotion == board.Queen
