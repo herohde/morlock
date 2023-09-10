@@ -7,8 +7,12 @@ import (
 )
 
 // Randomize adds a small amount of randomness to evaluations. The limit specifies how many
-// millipawns to add/remove.
+// millipawns to add/remove in the range [-limit/2; limit/2]. Does nothing if limit is zero.
 func Randomize(eval Evaluator, limit int, seed int64) Evaluator {
+	if limit <= 0 {
+		return eval
+	}
+
 	return &random{
 		limit: limit,
 		rand:  rand.New(rand.NewSource(seed)),
@@ -23,5 +27,6 @@ type random struct {
 }
 
 func (r *random) Evaluate(ctx context.Context, b *board.Board) Pawns {
-	return r.eval.Evaluate(ctx, b) + Pawns(r.rand.Intn(r.limit))/1000
+	noise := Pawns(r.rand.Intn(r.limit)-r.limit/2) / 1000
+	return r.eval.Evaluate(ctx, b) + noise
 }

@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	ply = flag.Int("ply", 2, "Search depth limit (zero if no limit)")
+	ply   = flag.Uint("ply", 2, "Search depth limit (zero if no limit)")
+	noise = flag.Int("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
 )
 
 func init() {
@@ -42,24 +43,27 @@ func main() {
 	s := search.AlphaBeta{
 		Eval: search.Quiescence{
 			Pick: turochamp.IsConsiderableMove,
-			Eval: eval.Randomize(turochamp.Eval{}, 10, time.Now().UnixNano()),
+			Eval: eval.Randomize(turochamp.Eval{}, *noise, time.Now().UnixNano()),
 		},
 	}
 
-	e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
+	e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s,
+		engine.WithOptions(engine.Options{Depth: *ply, Hash: 64}),
+		engine.WithTable(search.NewMinDepthTranspositionTable(1)),
+	)
 
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(128))
+		driver, out := uci.NewDriver(ctx, e, in)
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()
 
 	case console.ProtocolName:
-		driver, out := console.NewDriver(ctx, e, s, in, console.UseHash(128))
+		driver, out := console.NewDriver(ctx, e, s, in)
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

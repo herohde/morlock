@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	ply = flag.Int("ply", 0, "Search depth limit (zero if no limit)")
+	ply   = flag.Uint("ply", 1, "Search depth limit (zero if no limit)")
+	noise = flag.Int("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
 )
 
 func init() {
@@ -45,26 +46,29 @@ func main() {
 		Eval: search.AlphaBeta{
 			Pick: search.IsNotUnderPromotion,
 			Eval: sargon.OnePlyIfChecked{
-				Eval: eval.Randomize(points, 10, time.Now().UnixNano()),
+				Eval: eval.Randomize(points, *noise, time.Now().UnixNano()),
 			},
 		},
 		Hook: points,
 	}
 
-	e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s, engine.WithDepthLimit(*ply), engine.WithTable(search.NewMinDepthTranspositionTable(1)))
+	e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s,
+		engine.WithOptions(engine.Options{Depth: *ply, Hash: 64}),
+		engine.WithTable(search.NewMinDepthTranspositionTable(1)),
+	)
 
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
 		// Use UCI protocol.
 
-		driver, out := uci.NewDriver(ctx, e, in, uci.UseHash(64), uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()
 
 	case console.ProtocolName:
-		driver, out := console.NewDriver(ctx, e, s, in, console.UseHash(64))
+		driver, out := console.NewDriver(ctx, e, s, in)
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()

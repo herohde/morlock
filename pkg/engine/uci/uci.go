@@ -13,10 +13,12 @@ import (
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
-	"go.uber.org/atomic"
+	"github.com/seekerror/stdlib/pkg/lang"
+	"github.com/seekerror/stdlib/pkg/util/iox"
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -29,9 +31,6 @@ type options struct {
 	useBook bool
 	book    engine.Book
 	rand    *rand.Rand
-
-	useHash bool
-	hash    int
 }
 
 // UseBook instructs the driver to use the given opening book.
@@ -43,17 +42,10 @@ func UseBook(book engine.Book, seed int64) Option {
 	}
 }
 
-// UseHash instructs the driver to expose and use a Hash setting with the given default
-// size in MB. If not exposed, the engine will not use a transposition table.
-func UseHash(size int) Option {
-	return func(opt *options) {
-		opt.useHash = true
-		opt.hash = size
-	}
-}
-
 // Driver implements a UCI driver for an engine. It is activated if sent "uci".
 type Driver struct {
+	iox.AsyncCloser
+
 	e   *engine.Engine
 	opt options
 
@@ -62,9 +54,6 @@ type Driver struct {
 	active       atomic.Bool    // user is waiting for engine to move
 	ponder       chan search.PV // chan for intermediate search information
 	lastPosition string         // last position line (empty if no last position)
-
-	quit   chan struct{}
-	closed atomic.Bool
 }
 
 func NewDriver(ctx context.Context, e *engine.Engine, in <-chan string, opts ...Option) (*Driver, <-chan string) {
@@ -75,25 +64,15 @@ func NewDriver(ctx context.Context, e *engine.Engine, in <-chan string, opts ...
 
 	out := make(chan string, 100)
 	d := &Driver{
-		e:      e,
-		opt:    opt,
-		out:    out,
-		ponder: make(chan search.PV, 400),
-		quit:   make(chan struct{}),
+		AsyncCloser: iox.NewAsyncCloser(),
+		e:           e,
+		opt:         opt,
+		out:         out,
+		ponder:      make(chan search.PV, 400),
 	}
 	go d.process(ctx, in)
 
 	return d, out
-}
-
-func (d *Driver) Close() {
-	if d.closed.CAS(false, true) {
-		close(d.quit)
-	}
-}
-
-func (d *Driver) Closed() <-chan struct{} {
-	return d.quit
 }
 
 func (d *Driver) process(ctx context.Context, in <-chan string) {
@@ -237,9 +216,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 	//	   "option name NalimovPath type string default c:\\n"
 	//	   "option name Clear Hash type button\n"
 
-	if d.opt.useHash {
-		d.out <- fmt.Sprintf("option name Hash type spin default %v min 0 max %v", d.opt.hash, 16<<10)
-	}
+	d.out <- fmt.Sprintf("option name Depth type spin default %v min 0 max %v", d.e.Options().Depth, 100)
+	d.out <- fmt.Sprintf("option name Hash type spin default %v min 0 max %v", d.e.Options().Hash, 16<<10)
+
 	if d.opt.book != nil {
 		d.out <- fmt.Sprintf("option name OwnBook type check default %v", d.opt.useBook)
 	}
@@ -328,7 +307,11 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				case "OwnBook":
 					d.opt.useBook, _ = strconv.ParseBool(value)
 				case "Hash":
-					d.opt.hash, _ = strconv.Atoi(value)
+					hash, _ := strconv.Atoi(value)
+					d.e.SetHash(uint(hash))
+				case "Depth":
+					depth, _ := strconv.Atoi(value)
+					d.e.SetDepth(uint(depth))
 				}
 
 			case "register":
@@ -399,7 +382,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				if len(args) >= 7 && args[0] == "fen" {
 					position = strings.Join(args[1:7], " ")
 				}
-				if err := d.e.Reset(ctx, position, uint64(d.opt.hash)<<20); err != nil {
+				if err := d.e.Reset(ctx, position); err != nil {
 					logw.Errorf(ctx, "Invalid position: %v", line)
 					return
 				}
@@ -470,6 +453,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				infinite := false
 				timeout := time.Duration(0)
 
+				useTimeControl := false
+				var timeControl search.TimeControl
+
 				for i := 0; i < len(args); i++ {
 					cmd := args[i]
 					switch cmd {
@@ -489,22 +475,16 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 
 						switch cmd {
 						case "depth":
-							opt.DepthLimit = &n
+							opt.DepthLimit = lang.Some(uint(n))
 						case "wtime":
-							if opt.TimeControl == nil {
-								opt.TimeControl = &search.TimeControl{}
-							}
-							opt.TimeControl.White = time.Millisecond * time.Duration(n)
+							useTimeControl = true
+							timeControl.White = time.Millisecond * time.Duration(n)
 						case "btime":
-							if opt.TimeControl == nil {
-								opt.TimeControl = &search.TimeControl{}
-							}
-							opt.TimeControl.Black = time.Millisecond * time.Duration(n)
+							useTimeControl = true
+							timeControl.Black = time.Millisecond * time.Duration(n)
 						case "movestogo":
-							if opt.TimeControl == nil {
-								opt.TimeControl = &search.TimeControl{}
-							}
-							opt.TimeControl.Moves = n
+							useTimeControl = true
+							timeControl.Moves = n
 						case "movetime":
 							timeout = time.Millisecond * time.Duration(n)
 						}
@@ -515,6 +495,10 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 					default:
 						// silently ignore anything not handled.
 					}
+				}
+
+				if useTimeControl {
+					opt.TimeControl = lang.Some(timeControl)
 				}
 
 				if d.opt.useBook && d.opt.book != nil {
@@ -661,7 +645,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				d.out <- printPV(pv)
 			}
 
-		case <-d.quit:
+		case <-d.Closed():
 			d.ensureInactive(ctx)
 
 			logw.Infof(ctx, "Driver closed")
@@ -676,7 +660,7 @@ func (d *Driver) ensureInactive(ctx context.Context) {
 }
 
 func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
-	if d.active.CAS(true, false) {
+	if d.active.CompareAndSwap(true, false) {
 		if len(pv.Moves) > 0 {
 			// * bestmove <move1> [ ponder <move2> ]
 			//
@@ -685,7 +669,7 @@ func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
 			//	this command must always be sent if the engine stops searching, also in pondering mode if there is a
 			//	"stop" command, so for every "go" command a "bestmove" command is needed!
 			//	Directly before that the engine should send a final "info" command with the final search information,
-			//	the the GUI has the complete statistics about the last search.
+			//	the GUI has the complete statistics about the last search.
 
 			d.out <- printPV(pv)
 			d.out <- fmt.Sprintf("bestmove %v", printMove(pv.Moves[0]))

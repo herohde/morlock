@@ -5,7 +5,7 @@ import (
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/seekerror/logw"
-	"go.uber.org/atomic"
+	"github.com/seekerror/stdlib/pkg/util/iox"
 	"sync"
 	"time"
 )
@@ -18,8 +18,8 @@ type Iterative struct {
 func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt TranspositionTable, opt Options) (Handle, <-chan PV) {
 	out := make(chan PV, 1)
 	h := &handle{
-		init: make(chan struct{}),
-		quit: make(chan struct{}),
+		init: iox.NewAsyncCloser(),
+		quit: iox.NewAsyncCloser(),
 	}
 	go h.process(ctx, i.Root, b, tt, opt, out)
 
@@ -27,25 +27,24 @@ func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt Transposition
 }
 
 type handle struct {
-	init, quit        chan struct{}
-	initialized, done atomic.Bool
+	init, quit iox.AsyncCloser
 
 	pv PV
 	mu sync.Mutex
 }
 
 func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt TranspositionTable, opt Options, out chan PV) {
-	defer h.markInitialized()
+	defer h.init.Close()
 	defer close(out)
 
 	sctx := &Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt}
 	soft, useSoft := EnforceTimeControl(ctx, h, opt.TimeControl, b.Turn())
 
 	depth := 1
-	for !h.done.Load() {
+	for !h.quit.IsClosed() {
 		start := time.Now()
 
-		nodes, score, moves, err := search.Search(ctx, sctx, b, depth, h.quit)
+		nodes, score, moves, err := search.Search(ctx, sctx, b, depth, h.quit.Closed())
 		if err != nil {
 			if err == ErrHalted {
 				return // Halt was called.
@@ -77,11 +76,11 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt 
 		}
 		out <- pv
 
-		h.markInitialized()
-		if opt.DepthLimit != nil && depth == *opt.DepthLimit {
+		h.init.Close()
+		if limit, ok := opt.DepthLimit.V(); ok && uint(depth) == limit {
 			return // halt: reached max depth
 		}
-		if md, ok := score.MateDistance(); ok && int(md) < depth {
+		if md, ok := score.MateDistance(); ok && int(md) <= depth {
 			return // halt: forced mate found within full width search. Exact result.
 		}
 		if useSoft && soft < time.Since(start) {
@@ -92,21 +91,13 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt 
 }
 
 func (h *handle) Halt() PV {
-	<-h.init
-	if h.done.CAS(false, true) {
-		close(h.quit)
-	}
+	<-h.init.Closed()
+	h.quit.Close()
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	return h.pv
-}
-
-func (h *handle) markInitialized() {
-	if h.initialized.CAS(false, true) {
-		close(h.init)
-	}
 }
 
 // IsClosed return true iff the quit channel is closed.

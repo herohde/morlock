@@ -9,73 +9,39 @@ import (
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
-	"go.uber.org/atomic"
+	"github.com/seekerror/stdlib/pkg/lang"
+	"github.com/seekerror/stdlib/pkg/util/iox"
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
 
 const ProtocolName = "console"
 
-// Option is a driver option.
-type Option func(*options)
-
-type options struct {
-	useHash bool
-	hash    int
-}
-
-// UseHash instructs the driver to expose and use a Hash setting with the given default
-// size in MB. If not exposed, the engine will not use a transposition table.
-func UseHash(size int) Option {
-	return func(opt *options) {
-		opt.useHash = true
-		opt.hash = size
-	}
-}
-
 // Driver implements a console driver for debugging.
 type Driver struct {
-	e     *engine.Engine
-	opt   options
-	depth int
+	iox.AsyncCloser
+
+	e *engine.Engine
 
 	out chan<- string
 
 	root   search.Search
 	active atomic.Bool // user is waiting for engine to move
-
-	quit   chan struct{}
-	closed atomic.Bool
 }
 
-func NewDriver(ctx context.Context, e *engine.Engine, root search.Search, in <-chan string, opts ...Option) (*Driver, <-chan string) {
-	var opt options
-	for _, fn := range opts {
-		fn(&opt)
-	}
-
+func NewDriver(ctx context.Context, e *engine.Engine, root search.Search, in <-chan string) (*Driver, <-chan string) {
 	out := make(chan string, 100)
 	d := &Driver{
-		e:    e,
-		opt:  opt,
-		root: root,
-		out:  out,
-		quit: make(chan struct{}),
+		AsyncCloser: iox.NewAsyncCloser(),
+		e:           e,
+		root:        root,
+		out:         out,
 	}
 	go d.process(ctx, in)
 
 	return d, out
-}
-
-func (d *Driver) Close() {
-	if d.closed.CAS(false, true) {
-		close(d.quit)
-	}
-}
-
-func (d *Driver) Closed() <-chan struct{} {
-	return d.quit
 }
 
 func (d *Driver) process(ctx context.Context, in <-chan string) {
@@ -113,7 +79,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				if len(args) > 0 && args[0] != "moves" {
 					pos = strings.Join(args[0:6], " ")
 				}
-				if err := d.e.Reset(ctx, pos, uint64(d.opt.hash)<<20); err != nil {
+				if err := d.e.Reset(ctx, pos); err != nil {
 					logw.Errorf(ctx, "Invalid position: %v", line)
 					return
 				}
@@ -147,12 +113,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				d.ensureInactive(ctx)
 
 				var opt search.Options
-				if d.depth > 0 {
-					opt.DepthLimit = &d.depth
-				}
 				if len(args) > 0 {
 					depth, _ := strconv.Atoi(args[0])
-					opt.DepthLimit = &depth
+					opt.DepthLimit = lang.Some(uint(depth))
 				}
 
 				out, err := d.e.Analyze(ctx, opt)
@@ -173,16 +136,18 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 
 			case "depth", "d":
 				if len(args) > 0 {
-					d.depth, _ = strconv.Atoi(args[0])
+					depth, _ := strconv.Atoi(args[0])
+					d.e.SetDepth(uint(depth))
 				}
 
-			case "hash":
+			case "hash": // size in MB
 				if len(args) > 0 {
-					d.opt.hash, _ = strconv.Atoi(args[0])
+					hash, _ := strconv.Atoi(args[0])
+					d.e.SetHash(uint(hash))
 				}
 
 			case "nohash":
-				d.opt.hash = 0
+				d.e.SetHash(0)
 
 			case "halt", "stop":
 				pv, err := d.e.Halt(ctx)
@@ -208,7 +173,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				}
 			}
 
-		case <-d.quit:
+		case <-d.Closed():
 			d.ensureInactive(ctx)
 
 			logw.Infof(ctx, "Driver closed")
@@ -223,7 +188,7 @@ func (d *Driver) ensureInactive(ctx context.Context) {
 }
 
 func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
-	if d.active.CAS(true, false) {
+	if d.active.CompareAndSwap(true, false) {
 		// Search complete
 
 		if len(pv.Moves) > 0 {

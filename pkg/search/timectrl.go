@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/seekerror/logw"
+	"github.com/seekerror/stdlib/pkg/lang"
 	"time"
 )
 
@@ -43,16 +44,17 @@ func (t TimeControl) String() string {
 }
 
 // EnforceTimeControl enforces the time control limits, if any. Returns soft limit.
-func EnforceTimeControl(ctx context.Context, h Handle, tc *TimeControl, turn board.Color) (time.Duration, bool) {
-	if tc == nil {
+func EnforceTimeControl(ctx context.Context, h Handle, tc lang.Optional[TimeControl], turn board.Color) (time.Duration, bool) {
+	c, ok := tc.V()
+	if !ok {
 		return 0, false
 	}
 
-	soft, hard := tc.Limits(turn)
+	soft, hard := c.Limits(turn)
 	time.AfterFunc(hard, func() {
 		h.Halt()
 	})
 
-	logw.Debugf(ctx, "Time control limits for %v: [%v; %v]", tc, soft, hard)
+	logw.Debugf(ctx, "Time control limits for %v: [%v; %v]", c, soft, hard)
 	return soft, true
 }

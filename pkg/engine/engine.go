@@ -8,18 +8,31 @@ import (
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/build"
 	"github.com/seekerror/logw"
+	"github.com/seekerror/stdlib/pkg/lang"
 	"sync"
 )
 
-var version = build.NewVersion(0, 89, 1)
+var version = build.NewVersion(0, 89, 2)
+
+// Options are runtime-updatable engine options.
+type Options struct {
+	// Depth is the max search depth. If zero, there is no limit. Overridden by search
+	// options if provided.
+	Depth uint
+	// Hash is the transposition table size in MB. If zero, the engine will not use
+	// a transposition table.
+	Hash uint
+}
 
 // Engine encapsulates game-playing logic, search and evaluation.
 type Engine struct {
 	name, author string
 
 	launcher search.Launcher
+	factory  search.TranspositionTableFactory
 	zt       *board.ZobristTable
-	opts     options
+	seed     int64
+	opts     Options
 
 	b      *board.Board
 	tt     search.TranspositionTable
@@ -27,33 +40,28 @@ type Engine struct {
 	mu     sync.Mutex
 }
 
-// Option is an engine option.
-type Option func(*options)
-
-type options struct {
-	depth   *int
-	factory search.TranspositionTableFactory
-	seed    int64
-}
-
-func WithDepthLimit(depth int) Option {
-	return func(o *options) {
-		o.depth = &depth
-	}
-}
+// Option is an engine creation option.
+type Option func(*Engine)
 
 // WithTable configures the engine to use the given transposition table factory.
 func WithTable(factory search.TranspositionTableFactory) Option {
-	return func(o *options) {
-		o.factory = factory
+	return func(e *Engine) {
+		e.factory = factory
+	}
+}
+
+// WithOptions sets default runtime options.
+func WithOptions(opts Options) Option {
+	return func(e *Engine) {
+		e.opts = opts
 	}
 }
 
 // WithZobrist configures the engine to use the given random seed instead of the
 // default seed of zero.
 func WithZobrist(seed int64) Option {
-	return func(o *options) {
-		o.seed = seed
+	return func(e *Engine) {
+		e.seed = seed
 	}
 }
 
@@ -62,17 +70,17 @@ func New(ctx context.Context, name, author string, root search.Search, opts ...O
 		name:     name,
 		author:   author,
 		launcher: &search.Iterative{Root: root},
-		opts: options{
-			factory: search.NewTranspositionTable,
-			seed:    0,
+		factory:  search.NewTranspositionTable,
+		opts: Options{
+			Hash: 64,
 		},
 	}
 	for _, fn := range opts {
-		fn(&e.opts)
+		fn(e)
 	}
-	e.zt = board.NewZobristTable(e.opts.seed)
+	e.zt = board.NewZobristTable(e.seed)
 
-	_ = e.Reset(ctx, fen.Initial, 0)
+	_ = e.Reset(ctx, fen.Initial)
 
 	logw.Infof(ctx, "Initialized engine: %v", e.Name())
 	return e
@@ -86,6 +94,27 @@ func (e *Engine) Name() string {
 // Author returns the author.
 func (e *Engine) Author() string {
 	return e.author
+}
+
+func (e *Engine) Options() Options {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return e.opts
+}
+
+func (e *Engine) SetDepth(depth uint) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.opts.Depth = depth
+}
+
+func (e *Engine) SetHash(size uint) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.opts.Hash = size
 }
 
 // Board returns a forked board.
@@ -105,11 +134,11 @@ func (e *Engine) Position() string {
 }
 
 // Reset resets the engine to a new starting position in FEN format.
-func (e *Engine) Reset(ctx context.Context, position string, hash uint64) error {
+func (e *Engine) Reset(ctx context.Context, position string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logw.Infof(ctx, "Reset %v, TT=%vMB", position, hash>>20)
+	logw.Infof(ctx, "Reset %v, TT=%vMB", position, e.opts.Hash)
 
 	_, _ = e.haltSearchIfActive(ctx)
 
@@ -120,8 +149,8 @@ func (e *Engine) Reset(ctx context.Context, position string, hash uint64) error 
 	e.b = board.NewBoard(e.zt, pos, turn, noprogress, fullmoves)
 
 	e.tt = search.NoTranspositionTable{}
-	if hash > 0 {
-		e.tt = e.opts.factory(ctx, hash)
+	if e.opts.Hash > 0 {
+		e.tt = e.factory(ctx, uint64(e.opts.Hash)<<20)
 	}
 
 	logw.Infof(ctx, "New board: %v", e.b)
@@ -181,8 +210,8 @@ func (e *Engine) Analyze(ctx context.Context, opt search.Options) (<-chan search
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if opt.DepthLimit == nil {
-		opt.DepthLimit = e.opts.depth
+	if _, ok := opt.DepthLimit.V(); !ok {
+		opt.DepthLimit = lang.Some(e.opts.Depth)
 	}
 
 	logw.Infof(ctx, "Analyze %v, opt=%v", e.b, opt)

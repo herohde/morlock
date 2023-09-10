@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/seekerror/stdlib/pkg/lang"
 	"strings"
 )
 
@@ -14,19 +15,20 @@ var ErrHalted = errors.New("search halted")
 
 // Options hold dynamic search options. The user may change these on a particular search.
 type Options struct {
-	// DepthLimit, if set, limits the search to the given ply depth.
-	DepthLimit *int
+	// DepthLimit, if set, limits the search to the given ply depth. Zero means no limit.
+	DepthLimit lang.Optional[uint]
 	// TimeControl, if set, limits the search to the given time parameters.
-	TimeControl *TimeControl
+	TimeControl lang.Optional[TimeControl]
 }
 
 func (o Options) String() string {
 	var ret []string
-	if o.DepthLimit != nil {
-		ret = append(ret, fmt.Sprintf("depth=%v", *o.DepthLimit))
+	if v, ok := o.DepthLimit.V(); ok {
+		ret = append(ret, fmt.Sprintf("depth=%v", v))
 	}
-	if o.TimeControl != nil {
-		ret = append(ret, fmt.Sprintf("time=%v", *o.TimeControl))
+
+	if v, ok := o.TimeControl.V(); ok {
+		ret = append(ret, fmt.Sprintf("time=%v", v))
 	}
 	return fmt.Sprintf("[%v]", strings.Join(ret, ", "))
 }
