@@ -6,27 +6,24 @@ import (
 	"math/rand"
 )
 
-// Randomize adds a small amount of randomness to evaluations. The limit specifies how many
-// millipawns to add/remove in the range [-limit/2; limit/2]. Does nothing if limit is zero.
-func Randomize(eval Evaluator, limit int, seed int64) Evaluator {
-	if limit <= 0 {
-		return eval
-	}
+// Random is a randomized noise generator. It is used to a small amount of randomness to evaluations. The
+// limit specifies how many millipawns to add/remove in the range [-limit/2; limit/2]. The default value
+// always returns zero.
+type Random struct {
+	rand  *rand.Rand
+	limit int
+}
 
-	return &random{
+func NewRandom(limit int, seed int64) Random {
+	return Random{
 		limit: limit,
 		rand:  rand.New(rand.NewSource(seed)),
-		eval:  eval,
 	}
 }
 
-type random struct {
-	limit int
-	rand  *rand.Rand
-	eval  Evaluator
-}
-
-func (r *random) Evaluate(ctx context.Context, b *board.Board) Pawns {
-	noise := Pawns(r.rand.Intn(r.limit)-r.limit/2) / 1000
-	return r.eval.Evaluate(ctx, b) + noise
+func (n Random) Evaluate(ctx context.Context, b *board.Board) Pawns {
+	if n.limit <= 0 {
+		return 0
+	}
+	return Pawns(n.rand.Intn(n.limit)-n.limit/2) / 1000
 }

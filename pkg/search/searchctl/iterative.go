@@ -1,10 +1,12 @@
-package search
+package searchctl
 
 import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
+	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
+	"github.com/seekerror/stdlib/pkg/util/contextx"
 	"github.com/seekerror/stdlib/pkg/util/iox"
 	"sync"
 	"time"
@@ -12,11 +14,11 @@ import (
 
 // Iterative is a search harness for iterative deepening search.
 type Iterative struct {
-	Root Search
+	Root search.Search
 }
 
-func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt TranspositionTable, opt Options) (Handle, <-chan PV) {
-	out := make(chan PV, 1)
+func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, opt Options) (Handle, <-chan search.PV) {
+	out := make(chan search.PV, 1)
 	h := &handle{
 		init: iox.NewAsyncCloser(),
 		quit: iox.NewAsyncCloser(),
@@ -29,31 +31,34 @@ func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt Transposition
 type handle struct {
 	init, quit iox.AsyncCloser
 
-	pv PV
+	pv search.PV
 	mu sync.Mutex
 }
 
-func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt TranspositionTable, opt Options, out chan PV) {
+func (h *handle) process(ctx context.Context, root search.Search, b *board.Board, tt search.TranspositionTable, opt Options, out chan search.PV) {
 	defer h.init.Close()
 	defer close(out)
 
-	sctx := &Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt}
+	sctx := &search.Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt}
 	soft, useSoft := EnforceTimeControl(ctx, h, opt.TimeControl, b.Turn())
+
+	wctx, cancel := contextx.WithQuitCancel(ctx, h.quit.Closed())
+	defer cancel()
 
 	depth := 1
 	for !h.quit.IsClosed() {
 		start := time.Now()
 
-		nodes, score, moves, err := search.Search(ctx, sctx, b, depth, h.quit.Closed())
+		nodes, score, moves, err := root.Search(wctx, sctx, b, depth)
 		if err != nil {
-			if err == ErrHalted {
+			if err == search.ErrHalted {
 				return // Halt was called.
 			}
 			logw.Errorf(ctx, "Search failed on %v at depth=%v: %v", b, depth, err)
 			return
 		}
 
-		pv := PV{
+		pv := search.PV{
 			Depth: depth,
 			Nodes: nodes,
 			Score: score,
@@ -90,7 +95,7 @@ func (h *handle) process(ctx context.Context, search Search, b *board.Board, tt 
 	}
 }
 
-func (h *handle) Halt() PV {
+func (h *handle) Halt() search.PV {
 	<-h.init.Closed()
 	h.quit.Close()
 
@@ -98,14 +103,4 @@ func (h *handle) Halt() PV {
 	defer h.mu.Unlock()
 
 	return h.pv
-}
-
-// IsClosed return true iff the quit channel is closed.
-func IsClosed(ch <-chan struct{}) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-		return false
-	}
 }

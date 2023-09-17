@@ -8,6 +8,7 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
+	"github.com/herohde/morlock/pkg/search/searchctl"
 	"github.com/seekerror/logw"
 	"github.com/seekerror/stdlib/pkg/lang"
 	"github.com/seekerror/stdlib/pkg/util/iox"
@@ -112,7 +113,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 			case "analyze", "a":
 				d.ensureInactive(ctx)
 
-				var opt search.Options
+				var opt searchctl.Options
 				if len(args) > 0 {
 					depth, _ := strconv.Atoi(args[0])
 					opt.DepthLimit = lang.Some(uint(depth))
@@ -201,7 +202,7 @@ func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
 
 		var sub []result
 		for _, move := range b.Position().LegalMoves(b.Turn()) {
-			nodes, score, moves, _ := d.root.Search(ctx, &search.Context{TT: search.NoTranspositionTable{}, Ponder: []board.Move{move}}, b, pv.Depth, make(chan struct{}))
+			nodes, score, moves, _ := d.root.Search(ctx, &search.Context{TT: search.NoTranspositionTable{}, Ponder: []board.Move{move}}, b, pv.Depth)
 			sub = append(sub, result{m: move, s: score, n: nodes - 1, pv: moves[1:]})
 		}
 		sort.Sort(byScore(sub))

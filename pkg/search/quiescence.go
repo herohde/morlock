@@ -4,16 +4,17 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
+	"github.com/seekerror/stdlib/pkg/util/contextx"
 )
 
 // Quiescence implements a configurable alpha-beta QuietSearch.
 type Quiescence struct {
 	Pick Selection
-	Eval eval.Evaluator
+	Eval Evaluator
 }
 
-func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Board, quit <-chan struct{}) (uint64, eval.Score) {
-	run := &runQuiescence{pick: q.Pick, eval: q.Eval, b: b, quit: quit}
+func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Board) (uint64, eval.Score) {
+	run := &runQuiescence{pick: q.Pick, eval: q.Eval, b: b}
 
 	low, high := eval.NegInfScore, eval.InfScore
 	if !sctx.Alpha.IsInvalid() {
@@ -23,22 +24,20 @@ func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Boa
 		high = sctx.Beta
 	}
 
-	score := run.search(ctx, low, high)
+	score := run.search(ctx, sctx, low, high)
 	return run.nodes, score
 }
 
 type runQuiescence struct {
 	pick  Selection
-	eval  eval.Evaluator
+	eval  Evaluator
 	b     *board.Board
 	nodes uint64
-
-	quit <-chan struct{}
 }
 
 // search returns the positive score for the color.
-func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval.Score {
-	if IsClosed(r.quit) {
+func (r *runQuiescence) search(ctx context.Context, sctx *Context, alpha, beta eval.Score) eval.Score {
+	if contextx.IsCancelled(ctx) {
 		return eval.ZeroScore
 	}
 	if r.b.Result().Outcome == board.Draw {
@@ -49,7 +48,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 
 	hasLegalMoves := false
 	turn := r.b.Turn()
-	score := eval.HeuristicScore(r.eval.Evaluate(ctx, r.b))
+	score := eval.HeuristicScore(r.eval.Evaluate(ctx, sctx, r.b))
 	alpha = eval.Max(alpha, score)
 
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
@@ -67,7 +66,7 @@ func (r *runQuiescence) search(ctx context.Context, alpha, beta eval.Score) eval
 		}
 
 		if r.pick(ctx, m, r.b) {
-			score := r.search(ctx, beta.Negate(), alpha.Negate())
+			score := r.search(ctx, sctx, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			alpha = eval.Max(alpha, score)
 		}

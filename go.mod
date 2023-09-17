@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/seekerror/build v1.0.2
 	github.com/seekerror/logw v0.8.1
-	github.com/seekerror/stdlib v0.0.0-20230910055433-641c347838d8
+	github.com/seekerror/stdlib v0.0.0-20230911012819-a64b9b90a3d3
 	github.com/stretchr/testify v1.7.2
 )
 

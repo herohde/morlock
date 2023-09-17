@@ -12,6 +12,7 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
+	"github.com/herohde/morlock/pkg/search/searchctl"
 	"github.com/seekerror/logw"
 	"github.com/seekerror/stdlib/pkg/lang"
 	"github.com/seekerror/stdlib/pkg/util/iox"
@@ -218,6 +219,7 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 
 	d.out <- fmt.Sprintf("option name Depth type spin default %v min 0 max %v", d.e.Options().Depth, 100)
 	d.out <- fmt.Sprintf("option name Hash type spin default %v min 0 max %v", d.e.Options().Hash, 16<<10)
+	d.out <- fmt.Sprintf("option name Noise type spin default %v min 0 max %v", d.e.Options().Noise, 10_000)
 
 	if d.opt.book != nil {
 		d.out <- fmt.Sprintf("option name OwnBook type check default %v", d.opt.useBook)
@@ -312,6 +314,9 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 				case "Depth":
 					depth, _ := strconv.Atoi(value)
 					d.e.SetDepth(uint(depth))
+				case "Noise":
+					noise, _ := strconv.Atoi(value)
+					d.e.SetNoise(uint(noise))
 				}
 
 			case "register":
@@ -449,12 +454,12 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 
 				d.ensureInactive(ctx)
 
-				var opt search.Options
+				var opt searchctl.Options
 				infinite := false
 				timeout := time.Duration(0)
 
 				useTimeControl := false
-				var timeControl search.TimeControl
+				var timeControl searchctl.TimeControl
 
 				for i := 0; i < len(args); i++ {
 					cmd := args[i]

@@ -4,59 +4,59 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
+	"github.com/seekerror/stdlib/pkg/util/contextx"
 )
 
 // Minimax implements naive minimax search. Useful for comparison and validation.
 // Pseudo-code:
 //
 // function minimax(node, depth, maximizingPlayer) is
-//    if depth = 0 or node is a terminal node then
-//        return the heuristic value of node
-//    if maximizingPlayer then
-//        value := −∞
-//        for each child of node do
-//            value := max(value, minimax(child, depth − 1, FALSE))
-//        return value
-//    else (* minimizing player *)
-//        value := +∞
-//        for each child of node do
-//            value := min(value, minimax(child, depth − 1, TRUE))
-//        return value
+//
+//	if depth = 0 or node is a terminal node then
+//	    return the heuristic value of node
+//	if maximizingPlayer then
+//	    value := −∞
+//	    for each child of node do
+//	        value := max(value, minimax(child, depth − 1, FALSE))
+//	    return value
+//	else (* minimizing player *)
+//	    value := +∞
+//	    for each child of node do
+//	        value := min(value, minimax(child, depth − 1, TRUE))
+//	    return value
 //
 // See: https://en.wikipedia.org/wiki/Minimax.
 type Minimax struct {
-	Eval eval.Evaluator
+	Eval Evaluator
 }
 
-func (m Minimax) Search(ctx context.Context, sctx *Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
-	run := &runMinimax{eval: m.Eval, b: b, quit: quit}
-	score, moves := run.search(ctx, depth)
-	if IsClosed(quit) {
+func (m Minimax) Search(ctx context.Context, sctx *Context, b *board.Board, depth int) (uint64, eval.Score, []board.Move, error) {
+	run := &runMinimax{eval: m.Eval, b: b}
+	score, moves := run.search(ctx, sctx, depth)
+	if contextx.IsCancelled(ctx) {
 		return 0, eval.Score{}, nil, ErrHalted
 	}
 	return run.nodes, score, moves, nil
 }
 
 type runMinimax struct {
-	eval  eval.Evaluator
+	eval  Evaluator
 	b     *board.Board
 	nodes uint64
-
-	quit <-chan struct{}
 }
 
 // search returns the positive score for the color.
-func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board.Move) {
+func (m *runMinimax) search(ctx context.Context, sctx *Context, depth int) (eval.Score, []board.Move) {
 	m.nodes++
 
-	if IsClosed(m.quit) {
+	if contextx.IsCancelled(ctx) {
 		return eval.ZeroScore, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
 		return eval.ZeroScore, nil
 	}
 	if depth == 0 {
-		return eval.HeuristicScore(m.eval.Evaluate(ctx, m.b)), nil
+		return eval.HeuristicScore(m.eval.Evaluate(ctx, sctx, m.b)), nil
 	}
 
 	hasLegalMove := false
@@ -66,7 +66,7 @@ func (m *runMinimax) search(ctx context.Context, depth int) (eval.Score, []board
 	moves := m.b.Position().PseudoLegalMoves(m.b.Turn())
 	for _, move := range moves {
 		if m.b.PushMove(move) {
-			s, rem := m.search(ctx, depth-1)
+			s, rem := m.search(ctx, sctx, depth-1)
 			m.b.PopMove()
 
 			hasLegalMove = true

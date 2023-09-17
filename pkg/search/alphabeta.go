@@ -4,29 +4,31 @@ import (
 	"context"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/eval"
+	"github.com/seekerror/stdlib/pkg/util/contextx"
 )
 
 // AlphaBeta implements alpha-beta pruning. Pseudo-code:
 //
 // function alphabeta(node, depth, α, β, maximizingPlayer) is
-//    if depth = 0 or node is a terminal node then
-//        return the heuristic value of node
-//    if maximizingPlayer then
-//        value := −∞
-//        for each child of node do
-//            value := max(value, alphabeta(child, depth − 1, α, β, FALSE))
-//            α := max(α, value)
-//            if α ≥ β then
-//                break (* β cutoff *)
-//        return value
-//    else
-//        value := +∞
-//        for each child of node do
-//            value := min(value, alphabeta(child, depth − 1, α, β, TRUE))
-//            β := min(β, value)
-//            if β ≤ α then
-//                break (* α cutoff *)
-//        return value
+//
+//	if depth = 0 or node is a terminal node then
+//	    return the heuristic value of node
+//	if maximizingPlayer then
+//	    value := −∞
+//	    for each child of node do
+//	        value := max(value, alphabeta(child, depth − 1, α, β, FALSE))
+//	        α := max(α, value)
+//	        if α ≥ β then
+//	            break (* β cutoff *)
+//	    return value
+//	else
+//	    value := +∞
+//	    for each child of node do
+//	        value := min(value, alphabeta(child, depth − 1, α, β, TRUE))
+//	        β := min(β, value)
+//	        if β ≤ α then
+//	            break (* α cutoff *)
+//	    return value
 //
 // See: https://en.wikipedia.org/wiki/Alpha–beta_pruning.
 type AlphaBeta struct {
@@ -34,8 +36,8 @@ type AlphaBeta struct {
 	Eval QuietSearch
 }
 
-func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, depth int, quit <-chan struct{}) (uint64, eval.Score, []board.Move, error) {
-	run := &runAlphaBeta{pick: pick(p.Pick), ponder: sctx.Ponder, eval: p.Eval, tt: sctx.TT, b: b, quit: quit}
+func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, depth int) (uint64, eval.Score, []board.Move, error) {
+	run := &runAlphaBeta{pick: pick(p.Pick), ponder: sctx.Ponder, eval: p.Eval, tt: sctx.TT, noise: sctx.Noise, b: b}
 	low, high := eval.NegInfScore, eval.InfScore
 	if !sctx.Alpha.IsInvalid() {
 		low = sctx.Alpha
@@ -45,7 +47,7 @@ func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, de
 	}
 
 	score, moves := run.search(ctx, depth, low, high)
-	if IsClosed(quit) {
+	if contextx.IsCancelled(ctx) {
 		return 0, eval.InvalidScore, nil, ErrHalted
 	}
 	return run.nodes, score, moves, nil
@@ -55,17 +57,16 @@ type runAlphaBeta struct {
 	pick  Selection
 	eval  QuietSearch
 	tt    TranspositionTable
+	noise eval.Random
 	b     *board.Board
 	nodes uint64
 
 	ponder []board.Move
-
-	quit <-chan struct{}
 }
 
 // search returns the positive score for the color.
 func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.Score) (eval.Score, []board.Move) {
-	if IsClosed(m.quit) {
+	if contextx.IsCancelled(ctx) {
 		return eval.InvalidScore, nil
 	}
 	if m.b.Result().Outcome == board.Draw {
@@ -89,8 +90,8 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 	}
 
 	if depth == 0 {
-		sctx := &Context{Alpha: alpha, Beta: beta, TT: m.tt}
-		nodes, score := m.eval.QuietSearch(ctx, sctx, m.b, m.quit)
+		sctx := &Context{Alpha: alpha, Beta: beta, TT: m.tt, Noise: m.noise}
+		nodes, score := m.eval.QuietSearch(ctx, sctx, m.b)
 		m.nodes += nodes
 
 		m.tt.Write(m.b.Hash(), ExactBound, m.b.Ply(), 0, score, board.Move{})

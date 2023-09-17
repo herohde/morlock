@@ -1,17 +1,14 @@
 // Package search contains search functionality and utilities.
-package search
+package searchctl
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/stdlib/pkg/lang"
 	"strings"
 )
-
-// ErrHalted is an error indicating that the search was halted.
-var ErrHalted = errors.New("search halted")
 
 // Options hold dynamic search options. The user may change these on a particular search.
 type Options struct {
@@ -38,7 +35,7 @@ type Launcher interface {
 	// Launch a new search from the given position. It expects an exclusive (forked) board and
 	// returns a PV channel for iteratively deeper searches. If the search is exhausted, the
 	// channel is closed. The search can be stopped at any time.
-	Launch(ctx context.Context, b *board.Board, tt TranspositionTable, opt Options) (Handle, <-chan PV)
+	Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, opt Options) (Handle, <-chan search.PV)
 }
 
 // Handle is an interface for the engine to manage searches. The engine is expected to spin off
@@ -46,5 +43,5 @@ type Launcher interface {
 // stopping conditions and re-synchronization trivial.
 type Handle interface {
 	// Halt halts the search, if running. Idempotent.
-	Halt() PV
+	Halt() search.PV
 }

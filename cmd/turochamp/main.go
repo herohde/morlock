@@ -9,16 +9,14 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/console"
 	"github.com/herohde/morlock/pkg/engine/uci"
-	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
-	"time"
 )
 
 var (
 	ply   = flag.Uint("ply", 2, "Search depth limit (zero if no limit)")
-	noise = flag.Int("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
+	noise = flag.Uint("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
 )
 
 func init() {
@@ -43,20 +41,18 @@ func main() {
 	s := search.AlphaBeta{
 		Eval: search.Quiescence{
 			Pick: turochamp.IsConsiderableMove,
-			Eval: eval.Randomize(turochamp.Eval{}, *noise, time.Now().UnixNano()),
+			Eval: search.Leaf{Eval: turochamp.Eval{}},
 		},
 	}
 
 	e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s,
-		engine.WithOptions(engine.Options{Depth: *ply, Hash: 64}),
+		engine.WithOptions(engine.Options{Depth: *ply, Noise: *noise}),
 		engine.WithTable(search.NewMinDepthTranspositionTable(1)),
 	)
 
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
-		// Use UCI protocol.
-
 		driver, out := uci.NewDriver(ctx, e, in)
 		go engine.WriteStdoutLines(ctx, out)
 

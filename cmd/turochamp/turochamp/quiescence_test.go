@@ -29,13 +29,13 @@ func TestQuiescence(t *testing.T) {
 
 	qs := search.Quiescence{
 		Pick: turochamp.IsConsiderableMove,
-		Eval: turochamp.Eval{}}
+		Eval: search.Leaf{Eval: turochamp.Eval{}}}
 
 	for _, tt := range tests {
 		b, err := fen.NewBoard(tt.fen, tt.moves...)
 		require.NoError(t, err)
 
-		nodes, actual := qs.QuietSearch(context.Background(), search.EmptyContext, b, make(chan struct{}))
+		nodes, actual := qs.QuietSearch(context.Background(), search.EmptyContext, b)
 		assert.Equal(t, nodes, tt.nodes, "failed: %v", tt.fen)
 		assert.Equal(t, actual, tt.expected, "failed: %v", tt.fen)
 	}

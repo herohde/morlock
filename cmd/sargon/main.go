@@ -9,7 +9,6 @@ import (
 	"github.com/herohde/morlock/pkg/engine"
 	"github.com/herohde/morlock/pkg/engine/console"
 	"github.com/herohde/morlock/pkg/engine/uci"
-	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
@@ -18,7 +17,7 @@ import (
 
 var (
 	ply   = flag.Uint("ply", 1, "Search depth limit (zero if no limit)")
-	noise = flag.Int("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
+	noise = flag.Uint("noise", 10, "Evaluation noise in \"millipawns\" (zero if deterministic)")
 )
 
 func init() {
@@ -46,22 +45,19 @@ func main() {
 		Eval: search.AlphaBeta{
 			Pick: search.IsNotUnderPromotion,
 			Eval: sargon.OnePlyIfChecked{
-				Eval: eval.Randomize(points, *noise, time.Now().UnixNano()),
+				Leaf: search.Leaf{Eval: points},
 			},
 		},
 		Hook: points,
 	}
 
 	e := engine.New(ctx, "SARGON (1978)", "Dan and Kathe Spracklen", s,
-		engine.WithOptions(engine.Options{Depth: *ply, Hash: 64}),
-		engine.WithTable(search.NewMinDepthTranspositionTable(1)),
+		engine.WithOptions(engine.Options{Depth: *ply, Noise: *noise}),
 	)
 
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
-		// Use UCI protocol.
-
 		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(sargon.NewBook(), time.Now().UnixNano()))
 		go engine.WriteStdoutLines(ctx, out)
 

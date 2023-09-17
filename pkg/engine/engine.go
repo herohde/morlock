@@ -6,6 +6,7 @@ import (
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
 	"github.com/herohde/morlock/pkg/search"
+	"github.com/herohde/morlock/pkg/search/searchctl"
 	"github.com/seekerror/build"
 	"github.com/seekerror/logw"
 	"github.com/seekerror/stdlib/pkg/lang"
@@ -14,21 +15,23 @@ import (
 
 var version = build.NewVersion(0, 89, 2)
 
-// Options are runtime-updatable engine options.
+// Options are search creation options.
 type Options struct {
-	// Depth is the max search depth. If zero, there is no limit. Overridden by search
+	// Depth is the search depth limit. If zero, there is no limit. Overridden by search
 	// options if provided.
 	Depth uint
 	// Hash is the transposition table size in MB. If zero, the engine will not use
 	// a transposition table.
 	Hash uint
+	// Noise adds some millipawn randomness to the leaf evaluations.
+	Noise uint
 }
 
 // Engine encapsulates game-playing logic, search and evaluation.
 type Engine struct {
 	name, author string
 
-	launcher search.Launcher
+	launcher searchctl.Launcher
 	factory  search.TranspositionTableFactory
 	zt       *board.ZobristTable
 	seed     int64
@@ -36,7 +39,7 @@ type Engine struct {
 
 	b      *board.Board
 	tt     search.TranspositionTable
-	active search.Handle
+	active searchctl.Handle
 	mu     sync.Mutex
 }
 
@@ -69,11 +72,8 @@ func New(ctx context.Context, name, author string, root search.Search, opts ...O
 	e := &Engine{
 		name:     name,
 		author:   author,
-		launcher: &search.Iterative{Root: root},
+		launcher: &searchctl.Iterative{Root: root},
 		factory:  search.NewTranspositionTable,
-		opts: Options{
-			Hash: 64,
-		},
 	}
 	for _, fn := range opts {
 		fn(e)
@@ -117,6 +117,13 @@ func (e *Engine) SetHash(size uint) {
 	e.opts.Hash = size
 }
 
+func (e *Engine) SetNoise(millipawns uint) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.opts.Noise = millipawns
+}
+
 // Board returns a forked board.
 func (e *Engine) Board() *board.Board {
 	e.mu.Lock()
@@ -138,7 +145,7 @@ func (e *Engine) Reset(ctx context.Context, position string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logw.Infof(ctx, "Reset %v, TT=%vMB", position, e.opts.Hash)
+	logw.Infof(ctx, "Reset %v, depth=%v, TT=%vMB", position, e.opts.Depth, e.opts.Hash)
 
 	_, _ = e.haltSearchIfActive(ctx)
 
@@ -206,7 +213,7 @@ func (e *Engine) TakeBack(ctx context.Context) error {
 }
 
 // Analyze analyzes the current position.
-func (e *Engine) Analyze(ctx context.Context, opt search.Options) (<-chan search.PV, error) {
+func (e *Engine) Analyze(ctx context.Context, opt searchctl.Options) (<-chan search.PV, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

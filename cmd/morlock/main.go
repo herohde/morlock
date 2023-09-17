@@ -11,11 +11,6 @@ import (
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
-	"time"
-)
-
-var (
-	noise = flag.Int("noise", 10, "Evaluation noise in millipawns (zero if deterministic)")
 )
 
 func init() {
@@ -36,16 +31,16 @@ func main() {
 	s := search.AlphaBeta{
 		Eval: search.Quiescence{
 			Pick: search.IsQuickGain,
-			Eval: eval.Randomize(eval.Material{}, *noise, time.Now().UnixNano()),
+			Eval: search.Leaf{Eval: eval.Material{}},
 		},
 	}
-	e := engine.New(ctx, "morlock", "herohde", s)
+	e := engine.New(ctx, "morlock", "herohde", s,
+		engine.WithOptions(engine.Options{Hash: 64}),
+		engine.WithTable(search.NewMinDepthTranspositionTable(1)))
 
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
-		// Use UCI protocol.
-
 		driver, out := uci.NewDriver(ctx, e, in)
 		go engine.WriteStdoutLines(ctx, out)
 
