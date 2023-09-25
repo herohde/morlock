@@ -150,6 +150,15 @@ func (d *Driver) process(ctx context.Context, in <-chan string) {
 			case "nohash":
 				d.e.SetHash(0)
 
+			case "noise": // evaluation randomness in milli-pawns
+				if len(args) > 0 {
+					noise, _ := strconv.Atoi(args[0])
+					d.e.SetNoise(uint(noise))
+				}
+
+			case "nonoise":
+				d.e.SetNoise(0)
+
 			case "halt", "stop":
 				pv, err := d.e.Halt(ctx)
 				if err != nil {
@@ -196,7 +205,7 @@ func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
 			d.out <- fmt.Sprintf("bestmove %v", pv.Moves[0])
 		}
 
-		// Ponder each move for score breakdown.
+		// Ponder each move for score breakdown. No TT. No noise.
 
 		b := d.e.Board()
 

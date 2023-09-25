@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
 	"github.com/herohde/morlock/pkg/board/fen"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/herohde/morlock/pkg/search/searchctl"
 	"github.com/seekerror/build"
@@ -27,6 +28,10 @@ type Options struct {
 	Noise uint
 }
 
+func (o Options) String() string {
+	return fmt.Sprintf("{depth=%v, hash=%v, noise=%v}", o.Depth, o.Hash, o.Noise)
+}
+
 // Engine encapsulates game-playing logic, search and evaluation.
 type Engine struct {
 	name, author string
@@ -39,6 +44,7 @@ type Engine struct {
 
 	b      *board.Board
 	tt     search.TranspositionTable
+	noise  eval.Random
 	active searchctl.Handle
 	mu     sync.Mutex
 }
@@ -82,7 +88,7 @@ func New(ctx context.Context, name, author string, root search.Search, opts ...O
 
 	_ = e.Reset(ctx, fen.Initial)
 
-	logw.Infof(ctx, "Initialized engine: %v", e.Name())
+	logw.Infof(ctx, "Initialized engine: %v, options=%v", e.Name(), e.opts)
 	return e
 }
 
@@ -145,7 +151,7 @@ func (e *Engine) Reset(ctx context.Context, position string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logw.Infof(ctx, "Reset %v, depth=%v, TT=%vMB", position, e.opts.Depth, e.opts.Hash)
+	logw.Infof(ctx, "Reset %v, depth=%v, TT=%vMB, noise=%vcp", position, e.opts.Depth, e.opts.Hash, e.opts.Noise/10)
 
 	_, _ = e.haltSearchIfActive(ctx)
 
@@ -158,6 +164,10 @@ func (e *Engine) Reset(ctx context.Context, position string) error {
 	e.tt = search.NoTranspositionTable{}
 	if e.opts.Hash > 0 {
 		e.tt = e.factory(ctx, uint64(e.opts.Hash)<<20)
+	}
+	e.noise = eval.Random{}
+	if e.opts.Noise > 0 {
+		e.noise = eval.NewRandom(int(e.opts.Noise), e.seed)
 	}
 
 	logw.Infof(ctx, "New board: %v", e.b)
@@ -227,7 +237,7 @@ func (e *Engine) Analyze(ctx context.Context, opt searchctl.Options) (<-chan sea
 		return nil, fmt.Errorf("search already active")
 	}
 
-	handle, out := e.launcher.Launch(ctx, e.b.Fork(), e.tt, opt)
+	handle, out := e.launcher.Launch(ctx, e.b.Fork(), e.tt, e.noise, opt)
 	e.active = handle
 	return out, nil
 }

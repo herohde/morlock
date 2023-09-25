@@ -17,13 +17,13 @@ type Iterative struct {
 	Root search.Search
 }
 
-func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, opt Options) (Handle, <-chan search.PV) {
+func (i *Iterative) Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, noise eval.Random, opt Options) (Handle, <-chan search.PV) {
 	out := make(chan search.PV, 1)
 	h := &handle{
 		init: iox.NewAsyncCloser(),
 		quit: iox.NewAsyncCloser(),
 	}
-	go h.process(ctx, i.Root, b, tt, opt, out)
+	go h.process(ctx, i.Root, b, tt, noise, opt, out)
 
 	return h, out
 }
@@ -35,11 +35,11 @@ type handle struct {
 	mu sync.Mutex
 }
 
-func (h *handle) process(ctx context.Context, root search.Search, b *board.Board, tt search.TranspositionTable, opt Options, out chan search.PV) {
+func (h *handle) process(ctx context.Context, root search.Search, b *board.Board, tt search.TranspositionTable, noise eval.Random, opt Options, out chan search.PV) {
 	defer h.init.Close()
 	defer close(out)
 
-	sctx := &search.Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt}
+	sctx := &search.Context{Alpha: eval.NegInfScore, Beta: eval.InfScore, TT: tt, Noise: noise}
 	soft, useSoft := EnforceTimeControl(ctx, h, opt.TimeControl, b.Turn())
 
 	wctx, cancel := contextx.WithQuitCancel(ctx, h.quit.Closed())

@@ -1,10 +1,11 @@
-// Package search contains search functionality and utilities.
+// Package searchctl contains search functionality and utilities.
 package searchctl
 
 import (
 	"context"
 	"fmt"
 	"github.com/herohde/morlock/pkg/board"
+	"github.com/herohde/morlock/pkg/eval"
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/stdlib/pkg/lang"
 	"strings"
@@ -35,7 +36,7 @@ type Launcher interface {
 	// Launch a new search from the given position. It expects an exclusive (forked) board and
 	// returns a PV channel for iteratively deeper searches. If the search is exhausted, the
 	// channel is closed. The search can be stopped at any time.
-	Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, opt Options) (Handle, <-chan search.PV)
+	Launch(ctx context.Context, b *board.Board, tt search.TranspositionTable, noise eval.Random, opt Options) (Handle, <-chan search.PV)
 }
 
 // Handle is an interface for the engine to manage searches. The engine is expected to spin off
