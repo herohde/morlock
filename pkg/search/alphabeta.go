@@ -76,17 +76,10 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 	var best board.Move
 	if bound, d, score, m, ok := m.tt.Read(m.b.Hash()); ok {
 		best = m
-		if depth <= d {
-			isOpp := (d-depth)%2 != 0
-			if isOpp {
-				// if opposing side move, then score is negative and an upper bound.
-				score = score.Negate()
-			}
-			if (bound == ExactBound || !isOpp) && (beta == score || beta.Less(score)) {
-				// logw.Debugf(ctx, "TT: %v@%v = %v, %v", bound, d, score, move)
-				return score, nil // cutoff
-			}
-		}
+		if depth == d && bound == ExactBound {
+			// logw.Debugf(ctx, "TT: %v@%v = %v, %v", bound, d, score, move)
+			return score, nil // cutoff
+		} // else: not deep enough or precise enough
 	}
 
 	if depth == 0 {
@@ -148,7 +141,9 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 		return eval.ZeroScore, nil
 	}
 
-	m.tt.Write(m.b.Hash(), bound, m.b.Ply(), depth, alpha, first(pv))
+	if bound == ExactBound {
+		m.tt.Write(m.b.Hash(), bound, m.b.Ply(), depth, alpha, first(pv))
+	}
 	return alpha, pv
 }
 
