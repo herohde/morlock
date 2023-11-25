@@ -35,3 +35,8 @@ func (q OnePlyIfChecked) QuietSearch(ctx context.Context, sctx *search.Context, 
 	nodes, score, _, _ := s.Search(ctx, sctx, b, 1)
 	return nodes, score
 }
+
+// SkipUnderPromotions is an exploration of all moves, except under-promotions, in MVVLVA order.
+func SkipUnderPromotions(ctx context.Context, b *board.Board) (board.MovePriorityFn, board.MovePredicateFn) {
+	return search.MVVLVA, board.Move.IsNotUnderPromotion
+}

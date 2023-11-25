@@ -1,0 +1,14 @@
+[Event "?"]
+[Site "?"]
+[Date "1958.07.??"]
+[Round "?"]
+[White "Bernstein (IBM 704)"]
+[Black "Human"]
+[Result "0-1"]
+[ECO "C23"]
+[Opening "Bishop's Opening"]
+
+1. e4 e5 2. Bc4 b6 3. d3 Nf6 4. Bg5 Bb7 5. Bxf6 Qxf6 6. Nf3 c6 7. O-O d5
+8. exd5 cxd5 9. Bb5+ Nc6 10. c4 dxc4 11. Bxc6+ Qxc6 12. dxc4 e4 13. Ng5 Qg6
+14. Nh3 e3 15. f3 Bc5 16. Re1 O-O 17. Nc3 e2+ 18. Nf2 Bxf3  19. g3 exd1=Q
+20. Nxd1 Qc2 21. b3 Rad8 22. h4 Rxd1 {White resigns} 0-1

@@ -128,6 +128,16 @@ func (p *Position) Piece(c Color, piece Piece) Bitboard {
 	return p.pieces[c][piece]
 }
 
+// PieceSquares returns the squares for a given color/piece.
+func (p *Position) PieceSquares(c Color, piece Piece) []Square {
+	return p.pieces[c][piece].ToSquares()
+}
+
+// KingSquare returns the square for a given color. Must be valid and unique.
+func (p *Position) KingSquare(c Color) Square {
+	return p.pieces[c][King].LastPopSquare()
+}
+
 // Square returns the content of the given square. Returns false is no piece present.
 func (p *Position) Square(sq Square) (Color, Piece, bool) {
 	if p.IsEmpty(sq) {
@@ -150,6 +160,11 @@ func (p *Position) Square(sq Square) (Color, Piece, bool) {
 // IsEmpty returns true iff the square is empty.
 func (p *Position) IsEmpty(sq Square) bool {
 	return !p.rotated.Mask().IsSet(sq)
+}
+
+// IsDefended returns true iff the square is defended by the color.
+func (p *Position) IsDefended(c Color, sq Square) bool {
+	return p.IsAttacked(c.Opponent(), sq)
 }
 
 // IsAttacked returns true iff the square is attacked by the opposing color. Does not include en passant.

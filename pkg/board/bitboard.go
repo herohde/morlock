@@ -29,6 +29,23 @@ func (b Bitboard) LastPopSquare() Square {
 	return Square(bits.TrailingZeros64(uint64(b)))
 }
 
+// ToSquares returns population as a square list. Convenience function.
+func (b Bitboard) ToSquares() []Square {
+	ret := make([]Square, b.PopCount())
+
+	tmp := b
+	i := 0
+	for tmp != 0 {
+		sq := tmp.LastPopSquare()
+		tmp ^= BitMask(sq)
+
+		ret[i] = sq
+		i++
+	}
+
+	return ret
+}
+
 func (b Bitboard) String() string {
 	var sb strings.Builder
 	for i := ZeroSquare; i < NumSquares; i++ {
@@ -80,11 +97,7 @@ func PawnMoveboard(all Bitboard, c Color, pawns Bitboard) Bitboard {
 // PawnPromotionRank returns the mask of the promotion rank for the given color, i.e.,
 // Rank8 for White or Rank1 for Black.
 func PawnPromotionRank(c Color) Bitboard {
-	if c == White {
-		return BitRank(Rank8)
-	} else {
-		return BitRank(Rank1)
-	}
+	return BitRank(PromotionRank(c))
 }
 
 // PawnJumpRank returns the mask of the target rank for jump moves for the given color,

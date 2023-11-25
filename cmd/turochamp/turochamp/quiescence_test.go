@@ -28,8 +28,8 @@ func TestQuiescence(t *testing.T) {
 	}
 
 	qs := search.Quiescence{
-		Pick: turochamp.IsConsiderableMove,
-		Eval: search.Leaf{Eval: turochamp.Eval{}}}
+		Explore: turochamp.ConsiderableMovesOnly,
+		Eval:    search.Leaf{Eval: turochamp.Eval{}}}
 
 	for _, tt := range tests {
 		b, err := fen.NewBoard(tt.fen, tt.moves...)

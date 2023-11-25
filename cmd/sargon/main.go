@@ -43,7 +43,7 @@ func main() {
 	points := &sargon.Points{}
 	s := sargon.Hook{
 		Eval: search.AlphaBeta{
-			Pick: search.IsNotUnderPromotion,
+			Explore: sargon.SkipUnderPromotions,
 			Eval: sargon.OnePlyIfChecked{
 				Leaf: search.Leaf{Eval: points},
 			},

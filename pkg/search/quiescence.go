@@ -9,12 +9,12 @@ import (
 
 // Quiescence implements a configurable alpha-beta QuietSearch.
 type Quiescence struct {
-	Pick Selection
-	Eval Evaluator
+	Explore Exploration
+	Eval    Evaluator
 }
 
 func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Board) (uint64, eval.Score) {
-	run := &runQuiescence{pick: q.Pick, eval: q.Eval, b: b}
+	run := &runQuiescence{explore: q.Explore, eval: q.Eval, b: b}
 
 	low, high := eval.NegInfScore, eval.InfScore
 	if !sctx.Alpha.IsInvalid() {
@@ -29,10 +29,10 @@ func (q Quiescence) QuietSearch(ctx context.Context, sctx *Context, b *board.Boa
 }
 
 type runQuiescence struct {
-	pick  Selection
-	eval  Evaluator
-	b     *board.Board
-	nodes uint64
+	explore Exploration
+	eval    Evaluator
+	b       *board.Board
+	nodes   uint64
 }
 
 // search returns the positive score for the color.
@@ -54,18 +54,19 @@ func (r *runQuiescence) search(ctx context.Context, sctx *Context, alpha, beta e
 	// NOTE: Don't cutoff based on evaluation here. See if any legal moves first.
 	// Also do not report mate-in-X endings.
 
-	moves := NewMoveList(r.b.Position().PseudoLegalMoves(turn), MVVLVA)
+	priority, explore := r.explore(ctx, r.b)
+
+	moves := board.NewMoveList(r.b.Position().PseudoLegalMoves(turn), priority)
 	for {
 		m, ok := moves.Next()
 		if !ok {
 			break
 		}
-
 		if !r.b.PushMove(m) {
-			continue
+			continue // skip: not legal
 		}
 
-		if r.pick(ctx, m, r.b) {
+		if explore(m) {
 			score := r.search(ctx, sctx, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			alpha = eval.Max(alpha, score)

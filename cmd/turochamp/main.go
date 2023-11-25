@@ -40,14 +40,13 @@ func main() {
 
 	s := search.AlphaBeta{
 		Eval: search.Quiescence{
-			Pick: turochamp.IsConsiderableMove,
-			Eval: search.Leaf{Eval: turochamp.Eval{}},
+			Explore: turochamp.ConsiderableMovesOnly,
+			Eval:    search.Leaf{Eval: turochamp.Eval{}},
 		},
 	}
 
 	e := engine.New(ctx, "TUROCHAMP (1948)", "Alan Turing and David Champernowne", s,
 		engine.WithOptions(engine.Options{Depth: *ply, Noise: *noise}),
-		engine.WithTable(search.NewMinDepthTranspositionTable(1)),
 	)
 
 	in := engine.ReadStdinLines(ctx)

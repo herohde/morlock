@@ -29,10 +29,7 @@ func main() {
 	ctx := context.Background()
 
 	s := search.AlphaBeta{
-		Eval: search.Quiescence{
-			Pick: search.IsQuickGain,
-			Eval: search.Leaf{Eval: eval.Material{}},
-		},
+		Eval: search.Leaf{Eval: eval.Material{}},
 	}
 	e := engine.New(ctx, "morlock", "herohde", s,
 		engine.WithOptions(engine.Options{Hash: 64}),

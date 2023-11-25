@@ -32,12 +32,19 @@ import (
 //
 // See: https://en.wikipedia.org/wiki/Alpha–beta_pruning.
 type AlphaBeta struct {
-	Pick Selection
-	Eval QuietSearch
+	Explore Exploration
+	Eval    QuietSearch
 }
 
 func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, depth int) (uint64, eval.Score, []board.Move, error) {
-	run := &runAlphaBeta{pick: pick(p.Pick), ponder: sctx.Ponder, eval: p.Eval, tt: sctx.TT, noise: sctx.Noise, b: b}
+	run := &runAlphaBeta{
+		explore: fullIfNotSet(p.Explore),
+		eval:    p.Eval,
+		tt:      sctx.TT,
+		noise:   sctx.Noise,
+		ponder:  sctx.Ponder,
+		b:       b,
+	}
 	low, high := eval.NegInfScore, eval.InfScore
 	if !sctx.Alpha.IsInvalid() {
 		low = sctx.Alpha
@@ -54,12 +61,12 @@ func (p AlphaBeta) Search(ctx context.Context, sctx *Context, b *board.Board, de
 }
 
 type runAlphaBeta struct {
-	pick  Selection
-	eval  QuietSearch
-	tt    TranspositionTable
-	noise eval.Random
-	b     *board.Board
-	nodes uint64
+	explore Exploration
+	eval    QuietSearch
+	tt      TranspositionTable
+	noise   eval.Random
+	b       *board.Board
+	nodes   uint64
 
 	ponder []board.Move
 }
@@ -93,30 +100,28 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 
 	m.nodes++
 
-	var ponder board.Move
-	ponderOnly := false
-	if len(m.ponder) > 0 {
-		ponder = m.ponder[0]
-		m.ponder = m.ponder[1:]
-		ponderOnly = true
-	}
-
 	hasLegalMove := false
 	bound := ExactBound
 	var pv []board.Move
 
-	moves := NewMoveList(m.b.Position().PseudoLegalMoves(m.b.Turn()), First(best).MVVLVA)
+	priority, explore := m.explore(ctx, m.b)
+
+	if len(m.ponder) > 0 {
+		explore = m.ponder[0].Equals // overwrite: use ponder move even if not intended to be explored
+		m.ponder = m.ponder[1:]
+	}
+
+	moves := board.NewMoveList(m.b.Position().PseudoLegalMoves(m.b.Turn()), board.First(best, priority))
 	for {
 		move, ok := moves.Next()
 		if !ok {
 			break
 		}
-
 		if !m.b.PushMove(move) {
-			continue
+			continue // skip: not legal
 		}
 
-		if m.pick(ctx, move, m.b) && (!ponderOnly || ponder.Equals(move)) {
+		if explore(move) {
 			score, rem := m.search(ctx, depth-1, beta.Negate(), alpha.Negate())
 			score = eval.IncrementMateDistance(score).Negate()
 			if alpha.Less(score) {
@@ -142,21 +147,21 @@ func (m *runAlphaBeta) search(ctx context.Context, depth int, alpha, beta eval.S
 	}
 
 	if bound == ExactBound {
-		m.tt.Write(m.b.Hash(), bound, m.b.Ply(), depth, alpha, first(pv))
+		m.tt.Write(m.b.Hash(), bound, m.b.Ply(), depth, alpha, firstOrNone(pv))
 	}
 	return alpha, pv
 }
 
-func first(pv []board.Move) board.Move {
+func firstOrNone(pv []board.Move) board.Move {
 	if len(pv) == 0 {
 		return board.Move{}
 	}
 	return pv[0]
 }
 
-func pick(p Selection) Selection {
+func fullIfNotSet(p Exploration) Exploration {
 	if p == nil {
-		return IsAnyMove
+		return FullExploration
 	}
 	return p
 }

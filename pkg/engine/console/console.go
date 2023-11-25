@@ -212,7 +212,10 @@ func (d *Driver) searchCompleted(ctx context.Context, pv search.PV) {
 		var sub []result
 		for _, move := range b.Position().LegalMoves(b.Turn()) {
 			nodes, score, moves, _ := d.root.Search(ctx, &search.Context{TT: search.NoTranspositionTable{}, Ponder: []board.Move{move}}, b, pv.Depth)
-			sub = append(sub, result{m: move, s: score, n: nodes - 1, pv: moves[1:]})
+			if len(moves) > 0 {
+				moves = moves[1:] // skip ponder move in pv breakdown
+			}
+			sub = append(sub, result{m: move, s: score, n: nodes - 1, pv: moves})
 		}
 		sort.Sort(byScore(sub))
 

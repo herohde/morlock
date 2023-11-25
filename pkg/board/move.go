@@ -2,6 +2,7 @@ package board
 
 import (
 	"fmt"
+	"github.com/seekerror/stdlib/pkg/util/slicex"
 	"strings"
 )
 
@@ -95,9 +96,24 @@ func (m Move) IsCapture() bool {
 	return m.Type == CapturePromotion || m.Type == Capture
 }
 
+// IsCaptureOrEnPassant returns true iff the move is a Capture, CapturePromotion or EnPassant. Convenience function.
+func (m Move) IsCaptureOrEnPassant() bool {
+	return m.Type == CapturePromotion || m.Type == Capture || m.Type == EnPassant
+}
+
 // IsPromotion returns true iff the move is a Promotion or CapturePromotion. Convenience function.
 func (m Move) IsPromotion() bool {
 	return m.Type == CapturePromotion || m.Type == Promotion
+}
+
+// IsUnderPromotion returns true iff the move is a Promotion, but not to a Queen. Convenience function.
+func (m Move) IsUnderPromotion() bool {
+	return m.IsPromotion() && m.Promotion != Queen
+}
+
+// IsNotUnderPromotion returns false if under-promotion. Convenience function for move selection.
+func (m Move) IsNotUnderPromotion() bool {
+	return !m.IsUnderPromotion()
 }
 
 // IsCastle returns true iff the move is a KingSideCastle or QueenSideCastle. Convenience function.
@@ -193,6 +209,16 @@ func (m Move) String() string {
 	default:
 		return fmt.Sprintf("%v%v-%v", ignorePawn(m.Piece), m.From, m.To)
 	}
+}
+
+// MovePredicateFn is a move predicate.
+type MovePredicateFn func(move Move) bool
+
+// FindMoves returns moves that satisfy a predicate from a list of moves.
+func FindMoves(moves []Move, fn MovePredicateFn) []Move {
+	return slicex.MapIf(moves, func(m Move) (Move, bool) {
+		return m, fn(m)
+	})
 }
 
 // PrintMoves prints a list of moves.

@@ -1,0 +1,15 @@
+[Event "?"]
+[Site "?"]
+[Date "1958.??.??"]
+[Round "?"]
+[White "Bernstein (IBM 704)"]
+[Black "Human"]
+[Result "1/2-1/2"]
+[ECO "C20"]
+[Opening "King's pawn game"]
+[Termination "adjudication"]
+
+1. e4 e5 2. Bb5 Nf6 3. d4 Ng4 4. Qxg4 c6 5. Bc4 Qa5+ 6. Bd2 Qa4 7. Bd3 Qxd4
+8. Nc3 g6 9. f4 Bh6 10. fxe5 Bxd2+ 11. Kxd2 Qxe5 12. Nf3 Qe6 13. Qxe6+ dxe6
+14. e5 O-O 15. h4 Nd7 16. h5 {Draw by adjudication: game abandoned} 1/2-1/2
+
