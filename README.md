@@ -15,6 +15,7 @@ quiescence search of "considerable moves" using material ratio and position play
 
 Bernstein uses a selective search of "plausible moves":
 
+*  [bernstein-2ply](https://lichess.org/@/bernstein-2ply)
 *  [bernstein-4ply](https://lichess.org/@/bernstein-4ply)
 
 ### SARGON (1978) by Dan and Kathe Spracklen
