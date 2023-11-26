@@ -82,15 +82,12 @@ func FindPlausibleMoves(b *board.Board) []board.Move {
 	//	(2) Can material be gained, lost or exchanged?
 	//	(3) Is castling possible? Is so, stop.
 
-	// TODO(herohde) 11/24/2023: unclear to what extent static exchange evaluation is performed.
-	// For now, keep it simple and explore how it predicts the published games.
-
 	gain := func(move board.Move) bool {
 		switch move.Type {
 		case board.CapturePromotion, board.Promotion:
 			return true // not explicitly mentioned, but we consider promotions even if attacked
 		case board.Capture:
-			return MaterialValue(move.Capture) > MaterialValue(move.Piece) || !pos.IsAttacked(side, move.To)
+			return MaterialValue(move.Capture) > MaterialValue(move.Piece) || IsMoveSafe(pos, side, move)
 		case board.EnPassant:
 			return !pos.IsAttacked(side, move.To)
 		default:
@@ -99,17 +96,11 @@ func FindPlausibleMoves(b *board.Board) []board.Move {
 	}
 
 	loss := func(move board.Move) bool {
-		if pos.IsAttacked(side, move.From) {
-			return !pos.IsAttacked(side, move.To)
-		}
-		return false
+		return !IsSafe(pos, side, move.Piece, move.From) && IsMoveSafe(pos, side, move)
 	}
 
 	exchange := func(move board.Move) bool {
-		if move.Type == board.Capture {
-			return MaterialValue(move.Capture) == MaterialValue(move.Piece) && pos.IsAttacked(side, move.To)
-		}
-		return false
+		return move.Type == board.Capture && MaterialValue(move.Capture) == MaterialValue(move.Piece)
 	}
 
 	rank := map[board.Move]board.MovePriority{}
@@ -148,26 +139,55 @@ func FindPlausibleMoves(b *board.Board) []board.Move {
 	//	(7) Can pawns be moved?
 	//	(8) Can pieces be moved?
 
+	pawns := pos.Piece(side, board.Pawn)
+	key := board.PawnCaptureboard(side, board.PawnCaptureboard(side, pawns)&pawns)
+
 	// TODO(herohde) 11/25/2023: randomize "any move"? If not, Table1 ordering severely hampers
 	// exploration -- notably if ahead: a "free" King can take up 8 moves. Then there is no driver
 	// for progress.
 
 	develop := func(move board.Move) bool {
-		return move.Piece.IsBishopOrKnight() && move.From.Rank() == board.PromotionRank(side.Opponent())
+		if move.Piece == board.Knight || move.Piece == board.Bishop {
+			return move.From.Rank() == board.PromotionRank(side.Opponent())
+		}
+		return false
+	}
+
+	chains := func(move board.Move) bool {
+		if move.Piece != board.King {
+			return key.IsSet(move.To)
+		}
+		return false
+	}
+
+	files := func(move board.Move) bool {
+		if move.Piece == board.Rook || move.Piece == board.Queen {
+			from := (board.BitFile(move.From.File()) & pawns) == 0
+			to := (board.BitFile(move.To.File()) & pawns) == 0
+			return !from && to
+		}
+		return false
 	}
 
 	for _, move := range moves {
 		if _, ok := rank[move]; ok {
 			continue // skip: covered by rule 2-3
 		}
+		if !IsMoveSafe(pos, side, move) {
+			continue // skip: low priority to moving into loss
+		}
 
 		switch {
 		case develop(move):
+			rank[move] = 13
+		case chains(move):
+			rank[move] = 12
+		case files(move):
 			rank[move] = 11
 		case move.Piece == board.Pawn:
 			rank[move] = 10
-		default:
-			// any move
+		default: // any move
+			rank[move] = 1
 		}
 	}
 

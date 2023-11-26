@@ -49,9 +49,6 @@ func (p Piece) IsValid() bool {
 	return Pawn <= p && p <= King
 }
 
-func (p Piece) IsBishopOrKnight() bool {
-	return p == Bishop || p == Knight
-}
 func (p Piece) String() string {
 	switch p {
 	case NoPiece:

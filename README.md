@@ -11,6 +11,12 @@ quiescence search of "considerable moves" using material ratio and position play
 *  [turochamp-1ply](https://lichess.org/@/turochamp-1ply). Rating ~1300 (blitz/rapid).
 *  [turochamp-2ply](https://lichess.org/@/turochamp-2ply). Rating ~1600 (blitz/rapid).
 
+### BERNSTEIN (1957) by Alex Bernstein, Michael de V. Roberts, Timothy Arbuckle and Martin Belsky 
+
+Bernstein uses a selective search of "plausible moves":
+
+*  [bernstein-4ply](https://lichess.org/@/bernstein-4ply)
+
 ### SARGON (1978) by Dan and Kathe Spracklen
 
 Sargon uses a full search with material exchange, king/queen pins and board control heuristics:
@@ -23,4 +29,4 @@ Sargon uses a full search with material exchange, king/queen pins and board cont
 Each engine can be played 24/7 for free on [lichess.org](https://lichess.org). They have quirks, blind spots and limitations,
 which is part of their charm -- and play at low search depths to entertain rather than win.
 
-_September 2022_
+_November 2023_

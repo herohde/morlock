@@ -41,9 +41,9 @@ func (e Eval) Evaluate(ctx context.Context, b *board.Board) eval.Pawns {
 	case self == opp:
 		return 0
 	case self > opp:
-		return eval.Pawns(self) / eval.Pawns(opp)
+		return eval.Pawns(self) * 100 / eval.Pawns(opp)
 	default:
-		return -eval.Pawns(opp) / eval.Pawns(self)
+		return -eval.Pawns(opp) * 100 / eval.Pawns(self)
 	}
 }
 

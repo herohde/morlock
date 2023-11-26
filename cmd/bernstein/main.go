@@ -17,7 +17,7 @@ import (
 var (
 	ply      = flag.Uint("ply", 4, "Search depth limit (zero if no limit)")
 	branch   = flag.Int("branch", 7, "Search branch factor limit (zero if no limit)")
-	material = flag.Int("material", 8, "Material evaluation multiplier")
+	material = flag.Int("material", 20, "Material evaluation multiplier")
 	noise    = flag.Uint("noise", 0, "Evaluation noise in \"millipawns\" (zero if deterministic)")
 )
 
