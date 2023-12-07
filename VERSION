@@ -6,6 +6,13 @@
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
 
+### 25. nov 2023; Version 0.90 ###
+  - Added BERNSTEIN. Running as "bernstein-2ply" and "bernstein-4ply" on lichess.org. Odd ply only due to no QS.
+  - Noticed that ratings are depressed after allowing bot opponents.
+
+TODO:
+  - Transposition tables are flawed. Disabled for now, but that limits sargon-3/4ply.
+
 ### 21. apr 2021; Version 0.89 ###
   - Added transposition tables and move ordering w/ hash hit.
   - Tweaked SARGON and TUROCHAMP evaluations based on dubious moves on lichess.

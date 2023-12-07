@@ -16,7 +16,7 @@ func (p PlausibleMoveTable) Explore(ctx context.Context, b *board.Board) (board.
 }
 
 func truncate[T any](list []T, limit int) []T {
-	if len(list) > limit {
+	if limit > 0 && len(list) > limit {
 		return list[:limit]
 	}
 	return list
