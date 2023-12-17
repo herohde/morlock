@@ -19,6 +19,7 @@ const (
 )
 
 var (
+	AllPieces                 = []Piece{King, Queen, Rook, Knight, Bishop, Pawn}
 	KingQueen                 = []Piece{King, Queen}
 	KingQueenRookKnightBishop = []Piece{King, Queen, Rook, Knight, Bishop}
 	QueenRookBishop           = []Piece{Queen, Rook, Bishop}

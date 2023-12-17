@@ -109,10 +109,16 @@ func Control(pos *board.Position, side board.Color) int {
 }
 
 // KingDefense returns the number of squares around the king defended by the given side, but
-// with no opponent attackers. Populated squares included.
+// with no opponent attackers. Populated squares included. If empty, ignore the King.
 func KingDefense(pos *board.Position, side board.Color) int {
 	ret := 0
 	for _, sq := range board.KingAttackboard(pos.KingSquare(side)).ToSquares() {
+		if pos.IsEmpty(sq) {
+			if pos.IsDefendedBy(side, sq, board.QueenRookKnightBishopPawn) && !pos.IsAttacked(side, sq) {
+				ret++
+			}
+			continue
+		}
 		if pos.IsDefended(side, sq) && !pos.IsAttacked(side, sq) {
 			ret++
 		}

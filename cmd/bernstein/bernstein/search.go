@@ -238,13 +238,13 @@ func Table1(move board.Move) board.MovePriority {
 		case board.FileB:
 			return 3
 		case board.FileC:
-			return 5
+			return 6 // favor C over F
 		case board.FileD:
 			return 7
 		case board.FileE:
 			return 8
 		case board.FileF:
-			return 6
+			return 5
 		case board.FileG:
 			return 4
 		case board.FileH:

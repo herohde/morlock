@@ -167,16 +167,32 @@ func (p *Position) IsDefended(c Color, sq Square) bool {
 	return p.IsAttacked(c.Opponent(), sq)
 }
 
+// IsDefendedBy returns true iff the square is defended by pieces of the color.
+func (p *Position) IsDefendedBy(c Color, sq Square, list []Piece) bool {
+	return p.IsAttackedBy(c.Opponent(), sq, list)
+}
+
 // IsAttacked returns true iff the square is attacked by the opposing color. Does not include en passant.
 func (p *Position) IsAttacked(c Color, sq Square) bool {
+	return p.IsAttackedBy(c, sq, AllPieces)
+}
+
+// IsAttackedBy returns true iff the square is attacked by the given pieces of the opposing color. Does not include en passant.
+func (p *Position) IsAttackedBy(c Color, sq Square, list []Piece) bool {
 	opp := c.Opponent()
 
-	for _, piece := range KingQueenRookKnightBishop {
+	for _, piece := range list {
+		if piece == Pawn {
+			if PawnCaptureboard(opp, p.pieces[opp][Pawn])&BitMask(sq) != 0 {
+				return true
+			}
+			continue
+		}
 		if pieces := p.pieces[opp][piece]; pieces != 0 && Attackboard(p.rotated, sq, piece)&pieces != 0 {
 			return true
 		}
 	}
-	return PawnCaptureboard(opp, p.pieces[opp][Pawn])&BitMask(sq) != 0
+	return false
 }
 
 // IsChecked returns true iff the color is in check. Convenient for IsAttacked(King).

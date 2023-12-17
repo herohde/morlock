@@ -21,6 +21,7 @@ func TestFindPlausibleMoves(t *testing.T) {
 		// 2023 game2
 		{"rnbqk1nr/ppp2ppp/3p4/2b1p3/1PP1P3/P4N2/3P1PPP/RNBQKB1R b KQkq - 0 5", 7, "Bc5-d4 Bc5-b6 Bc8-g4 Ng8-h6 Ng8-f6 Bc8-e6 Nb8-c6"}, // move 5: search did not pick B
 		{"rn1q1rk1/ppp2ppp/3p1n2/8/1PP1p1b1/PQ3N2/4BPPP/RNB2RK1 b - - 1 12", 7, "e4*f3 Bg4*f3 Nb8-c6 Nb8-a6 Nb8-d7 c7-c5 d6-d5"},       // move 12: no capture
+		{"rnbqkbnr/pppp1ppp/8/4p3/8/2N5/PPPPPPPP/R1BQKBNR w KQkq e6 0 2", 7, "Ng1-f3 Ng1-h3 e2-e4 e2-e3 d2-d4 d2-d3 f2-f3"},            // quirk that 4ply search picks "f3"
 	}
 
 	for _, tt := range tests {

@@ -12,6 +12,7 @@ import (
 	"github.com/herohde/morlock/pkg/search"
 	"github.com/seekerror/logw"
 	"os"
+	"time"
 )
 
 var (
@@ -55,7 +56,7 @@ func main() {
 	in := engine.ReadStdinLines(ctx)
 	switch <-in {
 	case uci.ProtocolName:
-		driver, out := uci.NewDriver(ctx, e, in)
+		driver, out := uci.NewDriver(ctx, e, in, uci.UseBook(bernstein.NewBook(), time.Now().UnixNano()))
 		go engine.WriteStdoutLines(ctx, out)
 
 		<-driver.Closed()
