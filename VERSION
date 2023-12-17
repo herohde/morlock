@@ -2,9 +2,15 @@
 //
 // Morlock chess engine
 // 
-// Copyright (C) 2000-2021
+// Copyright (C) 2000-2023
 // Henning Korsholm Rohde <herohde@seekerror.org>
 //
+
+### 16. dec 2023; Version 0.91 ###
+  - Added livechess-uci. An adaptor to use a DGT Eboard as an UCI engine. Work in progress.
+
+TODO:
+  - Revamp Engine as interface with custom UCI options. Multiple feeds to same game suspect.
 
 ### 25. nov 2023; Version 0.90 ###
   - Added BERNSTEIN. Running as "bernstein-2ply" and "bernstein-4ply" on lichess.org. Odd ply only due to no QS.

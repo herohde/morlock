@@ -14,7 +14,7 @@ import (
 	"sync"
 )
 
-var version = build.NewVersion(0, 90, 1)
+var version = build.NewVersion(0, 91, 0)
 
 // Options are search creation options.
 type Options struct {
