@@ -1,0 +1,92 @@
+# Make sure to check the documentation at https://goreleaser.com
+
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 1
+
+before:
+  hooks:
+    - go mod tidy
+
+# export GITTREE=`git rev-list HEAD | wc -l | tr -d '[[:space:]]'`
+
+builds:
+  - main: ./cmd/turochamp
+    id: "turochamp"
+    binary: turochamp
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - linux_arm
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+    ldflags:
+      - -s -w -X "github.com/seekerror/build.GitTree={{.Env.GITTREE}}" -X "github.com/seekerror/build.GitHash={{.ShortCommit}}"
+
+  - main: ./cmd/sargon
+    id: "sargon"
+    binary: sargon
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - linux_arm
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+    ldflags:
+      - -s -w -X "github.com/seekerror/build.GitTree={{.Env.GITTREE}}" -X "github.com/seekerror/build.GitHash={{.ShortCommit}}"
+
+  - main: ./cmd/bernstein
+    id: "bernstein"
+    binary: bernstein
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - linux_arm
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+    ldflags:
+      - -s -w -X "github.com/seekerror/build.GitTree={{.Env.GITTREE}}" -X "github.com/seekerror/build.GitHash={{.ShortCommit}}"
+
+  - main: ./cmd/livechess-uci
+    id: "livechess-uci"
+    binary: livechess-uci
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - linux_arm
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+    ldflags:
+      - -s -w -X "github.com/seekerror/build.GitTree={{.Env.GITTREE}}" -X "github.com/seekerror/build.GitHash={{.ShortCommit}}"
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+
+release:
+  draft: true
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
